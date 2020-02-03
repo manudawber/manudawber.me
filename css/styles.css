@@ -1,0 +1,20 @@
+html {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+header, main {
+    display: flex;
+}
+
+header {
+    flex-direction: row;
+    background-color: #222;
+}
+
+header h1 {
+    margin: 0;
+}
+
+body {   
+    flex-direction: column;
+}
