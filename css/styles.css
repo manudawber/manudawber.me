@@ -1,20 +1,102 @@
 html {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Open Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 300;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #000;
 }
 
-header, main {
+header, main, footer {
     display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 1rem 0 1rem;
+}
+
+header, footer {
+    flex-direction: row;
+    background-color: #3d3f41;
+    color: #fff;
 }
 
 header {
-    flex-direction: row;
-    background-color: #222;
+    height: 6rem;
+    padding-top: 2rem;;
+    align-items: flex-end;
 }
 
-header h1 {
+main {
+    margin-top: 3rem;
+    margin-bottom: 3rem;
+}
+
+footer {
+    height: 2rem;
+}
+
+h1 {
+    margin: 0;
+    line-height: 1em;
+    text-transform: uppercase;
+    font-size: 3rem;
+    letter-spacing: 0.2rem;
+}
+
+h2 {
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.16rem;
+}
+
+h3 {
     margin: 0;
 }
 
-body {   
-    flex-direction: column;
+.entry {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1rem;
+}
+
+.entry:last-child {
+    margin-bottom: 2rem;
+}
+
+.entry-date {
+    margin-left: auto;
+    font-weight: 600;
+}
+
+.entry-content {
+    width: 100%;
+}
+
+.entry-content > span {
+    display: block;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+ul {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}
+
+li:last-child {
+    margin-bottom: 0;
+}
+
+.container > section:last-child > .entry {
+    margin-bottom: 0;
 }

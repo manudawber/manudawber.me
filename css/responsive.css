@@ -1,0 +1,14 @@
+@media (max-width: 500px) {
+  main {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .entry-date {
+    width: 100%;
+  }
+
+  ul {
+    padding-left: 20px;
+  }
+}

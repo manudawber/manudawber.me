@@ -2,81 +2,101 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Manu Dawber | Resume</title>
     <meta name="description" content="My Resume">
     <meta name="author" content="Manu Dawber">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="css/normalize.css">
-    <link rel="stylesheet" href="css/styles.css?v=1.0">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <title>Manu Dawber | Resume</title>
   </head>
   <body>
     <header>
-      <h1>Manu Dawber</h1>
-      <!--<section>
-        <p>Web: <a href="https://manudawber.me">manudawber.me</a></p>
-        <p>Email: <a href="mailto:manudawber@gmail.com">manudawber@gmail.com</a></p>
-        <p>Phone: <a href="tel:64-21-716-650">+64 21 716 650</a></p>
-      </section>-->
+      <div class="container">
+        <h1>Manu Dawber</h1>
+        <!--<section>
+          <p>Web: <a href="https://manudawber.me">manudawber.me</a></p>
+          <p>Email: <a href="mailto:manudawber@gmail.com">manudawber@gmail.com</a></p>
+          <p>Phone: <a href="tel:64-21-716-650">+64 21 716 650</a></p>
+        </section>-->
+      </div>
     </header>
     <main>
-      <section class="experience">
-        <h2>Experience</h2>
-        <section class="entry">
-          <h3>Integration Consultant @ EnterpriseIT</h3>
-          <span class="entry-date">November 2017 - Present</span>
-          <ul>
-            <li>Extensive use of the Elastic stack (Elasticsearch, Logstash, Kibana, Beats). I've deployed and managed Elasticsearch with many of our customers across a number of use cases: app search, infrastructure and application monitoring, log aggregation and management, anomaly detection, security, alerting.</li>
-            <li>Developed a set of Go APIs that expose a travel booking system to various online travel agents (Expedia, Tripadvisor, etc.), these run on Kubernetes and are monitored with Elasticsearch. I've also developed APIs using AWS API Gateway and Lambdas.</li>
-            <li>Automated the deployment of public facing Silverstripe applications following a blue-green deployment pattern. This involved rebuilding our customers AWS infrastructure from scratch using CloudFormation, and building a blue-green deployment pipeline with Jenkins and Bash.</li>
-            <li>Designed and built the infrastructure for a customers data warehouse; automated via Jenkins and CloudFormation.</li>
-            <li>Administration and support for many platforms including Elasticsearch, Kubernetes, MuleSoft, Tyk API Gateway; comfortable with Linux and Bash.</li>
-          </ul>
-        </section>
-        <section class="entry">
-          <h3>Systems Analyst @ Westpac NZ</h3>
-          <span class="entry-date">November 2016 - November 2017</span>
-          <ul>
-            <li>Administered and managed Westpac's observability tools: Elasticsearch and Dynatrace. I was responsible for running the systems as well as helping Westpac's application teams adopt the tools from agent installation and data parsing through to data visualisation and alerting.</li>
-            <li>Automated deployment and management of these tools using Chef.</li>
-            <li>Administered the internal HR tool that handled performance reviews, this was run on Docker using Docker Compose.</li>
-          </ul>
-        </section>
-        <section class="entry">
-          <h3>Technology Infrastructure Intern @ Westpac NZ</h3>
-          <span class="entry-date">November 2015 - November 2016</span>
-          <ul>
-            <li>Identified and executed cost savings opportunities within Westpac's IT infrastructure spending through a variety of initiatives:
+      <div class="container">
+        <section class="experience">
+          <h2>Experience</h2>
+          <section class="entry">
+            <h3>Integration Consultant @ EnterpriseIT</h3>
+            <span class="entry-date">November 2017 - Present</span>
+            <section class="entry-content">
               <ul>
-                <li>analysed server usage statistics and right-sized or decommissioned servers,</li>
-                <li>wrote Chef cookbooks for common server builds,</li>
-                <li>conducted an internal competition to encourage staff to clean up their servers and personal drives to save on storage costs.</li>
+                <li>Extensive use of the Elastic stack (Elasticsearch, Logstash, Kibana, Beats). I've deployed and managed Elasticsearch with many of our customers across a number of use cases: app search, infrastructure and application monitoring, log aggregation and management, anomaly detection, security, alerting.</li>
+                <li>Developed a set of Go APIs that expose a travel booking system to various online travel agents (Expedia, Tripadvisor, etc.); these run on Kubernetes and are monitored with Elasticsearch. I've also developed APIs using AWS API Gateway and Lambdas.</li>
+                <li>Automated the deployment of public facing Silverstripe applications following a blue-green deployment pattern. This involved rebuilding our customers AWS infrastructure from scratch using CloudFormation, and building a blue-green deployment pipeline with Jenkins and Bash.</li>
+                <li>Designed and built the infrastructure for a customers data warehouse; automated via Jenkins and CloudFormation.</li>
+                <li>Administration and support for many platforms including Elasticsearch, Kubernetes, MuleSoft, Tyk API Gateway; comfortable with Linux and Bash.</li>
               </ul>
-            </li>
-          </ul>
+            </section>
+          </section>
+          <section class="entry">
+            <h3>Systems Analyst @ Westpac</h3>
+            <span class="entry-date">November 2016 - November 2017</span>
+            <section class="entry-content">
+              <ul>
+                <li>Administered and managed Westpac's observability tools: Elasticsearch and Dynatrace. I was responsible for running the systems as well as helping Westpac's application teams adopt the tools from agent installation and data parsing through to data visualisation and alerting.</li>
+                <li>Automated deployment and management of these tools using Chef.</li>
+                <li>Administered the internal HR tool that handled performance reviews, this was run on Docker using Docker Compose.</li>
+              </ul>
+            </section>
+          </section>
+          <section class="entry">
+            <h3>Technology Intern @ Westpac</h3>
+            <span class="entry-date">November 2015 - November 2016</span>
+            <section class="entry-content">
+              <ul>
+                <li>Identified and executed cost savings opportunities within Westpac's IT infrastructure spending through a variety of initiatives:
+                  <ul>
+                    <li>analysed server usage statistics and right-sized or decommissioned servers,</li>
+                    <li>wrote Chef cookbooks for common server builds,</li>
+                    <li>conducted an internal competition to encourage staff to clean up their servers and personal drives to save on storage costs.</li>
+                  </ul>
+                </li>
+              </ul>
+            </section>
+          </section>
+          <section class="entry">
+            <h3>Junior Front-end Developer @ Ubiquity</h3>
+            <span class="entry-date">February 2015 - October 2015</span>
+            <section class="entry-content">
+              <ul>
+                <li>Provided internal technical support to Ubiquity staff, mainly helping with Windows problems and IT hardware setup or troubleshooting.</li>
+                <li>Developed eDMs for Ubiquity clients: converting Photoshop assets into responsive mobile-friendly email templates.</li>
+                <li>Designed and developed an overhaul of the Ubiquity website: introduced a modern visual aesthetic, implemented SEO optimisations, and improved the deployment process by automating code pre-processing (SASS) and dependency resolution (Gulp).</li>
+              </ul>
+            </section>
+          </section>
         </section>
-        <section class="entry">
-          <h3>Junior Front-end Developer @ Ubiquity</h3>
-          <span class="entry-date">February 2015 - October 2015</span>
-          <ul>
-            <li>Provided internal technical support to Ubiquity staff, mainly helping with Windows problems and IT hardware setup or troubleshooting.</li>
-            <li>Developed eDMs for Ubiquity clients: converting Photoshop assets into responsive mobile-friendly email templates.</li>
-            <li>Designed and developed an overhaul of the Ubiquity website: introduced a modern visual aesthetic, implemented SEO optimisations, and improved the deployment process by automating code pre-processing (SASS) and dependency resolution (Gulp).</li>
-          </ul>
+        <section class="certificates">
+          <h2>Certificates</h2>
+          <section class="entry">
+            <h3>Elastic Cloud Engineer</h3>
+            <span class="entry-date">2019</span>
+          </section>
         </section>
-      </section>
-      <section class="certificates">
-        <h2>Certificates</h2>
-        <section class="entry">
-          <h3>Elastic Cloud Engineer (2019)</h3>
+        <section class="education">
+          <h2>Education</h2>
+          <section class="entry">
+            <h3>Bachelor of Science @ The&nbsp;University&nbsp;of&nbsp;Auckland</h3>
+            <span class="entry-date">2017</span>
+            <section class="entry-content">
+              <span>Major in Computer Science and Psychology</span>
+            </section>
+          </section>
         </section>
-      </section>
-      <section class="education">
-        <h2>Education</h2>
-        <section class="entry">
-          <h3>Bachelor of Science @ The University of Auckland</h3>
-          <span class="entry-date">2013 - 2017</span>
-          <p>Major in Computer Science and Psychology</p>
-        </section>
-      </section>
-    </main>  
+      </div>
+    </main>
   </body>
+  <footer>
+    <div class="container"></div>
+  </footer>
 </html>
