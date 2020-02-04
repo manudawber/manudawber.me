@@ -6,6 +6,12 @@ html {
     color: #000;
 }
 
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 header, main, footer {
     display: flex;
     justify-content: center;
@@ -25,8 +31,39 @@ header, footer {
 
 header {
     height: 6rem;
-    padding-top: 2rem;;
+    padding-top: 2rem;
     align-items: flex-end;
+}
+
+header > .container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.contact-info a {
+    text-decoration: none;
+    color: #fff;
+}
+
+img.icon {
+    width: 20px;
+    margin-left: 4px;
+    fill: #fff; 
+}
+
+.contact-info span {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
 }
 
 main {
@@ -36,6 +73,7 @@ main {
 
 footer {
     height: 2rem;
+    margin-top: auto;
 }
 
 h1 {
@@ -99,4 +137,17 @@ li:last-child {
 
 .container > section:last-child > .entry {
     margin-bottom: 0;
+}
+
+.skills ul {
+    list-style: none;
+}
+
+.skills li {
+    display: inline;
+    background: #efefef;
+    padding: 2px 4px;
+    border-radius: 2px;
+    border: 1px solid #ccc;
+    margin-right: 4px;
 }

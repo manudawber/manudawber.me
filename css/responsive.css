@@ -12,3 +12,17 @@
     padding-left: 20px;
   }
 }
+
+@media print {
+  html {
+    font-size: 10pt;
+  }
+
+  header {
+    height: 4rem;
+  }
+
+  footer {
+    display: none;
+  }
+}
