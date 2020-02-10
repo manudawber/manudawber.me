@@ -51,7 +51,21 @@
     display: inline;
   }
 
-  .dnb {
+  .entry {
     page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 1cm 0 1cm 0;
+  }
+
+  @page :first {
+    margin: 0 0 0 0;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
   }
 }
