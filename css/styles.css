@@ -4,6 +4,7 @@ html {
     font-size: 11pt;
     line-height: 1.5;
     color: #000;
+    min-width: 320px;
 }
 
 body {
@@ -47,23 +48,22 @@ header > .container {
     flex-direction: column;
     justify-content: flex-end;
     align-items: flex-end;
+    padding: 2px;
 }
 
 .contact-info a {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     text-decoration: none;
     color: #fff;
 }
 
 img.icon {
-    width: 20px;
+    width: 16px;
     margin-left: 4px;
+    margin-right: 4px;
     fill: #fff; 
-}
-
-.contact-info span {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
 }
 
 main {
@@ -139,15 +139,17 @@ li:last-child {
     margin-bottom: 0;
 }
 
-.skills ul {
+.tag-style {
     list-style: none;
+    padding-left: 0;
+    margin: 0;
 }
 
-.skills li {
+.tag-style li {
     display: inline;
     background: #efefef;
-    padding: 2px 4px;
-    border-radius: 2px;
-    border: 1px solid #ccc;
+    padding: 4px 8px;
+    border-radius: 4px;
     margin-right: 4px;
+    line-height: 2.5em;
 }

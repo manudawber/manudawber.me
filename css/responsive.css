@@ -1,4 +1,4 @@
-@media (max-width: 500px) {
+@media (max-width: 640px) {
   main {
     margin-top: 2rem;
     margin-bottom: 2rem;
@@ -10,6 +10,16 @@
 
   ul {
     padding-left: 20px;
+  }
+
+  .contact-info img {
+    width: 2.5rem;
+    margin-left: 2rem;
+    margin-right: 0;
+  }
+
+  .contact-info span {
+    display: none;
   }
 }
 
@@ -24,5 +34,24 @@
 
   footer {
     display: none;
+  }
+
+  .container {
+    margin: 0 4rem 0 4rem;
+  }
+
+  .contact-info img {
+    width: 16px;
+    margin-left: 4px;
+    margin-right: 4px;
+    fill: #fff; 
+  }
+
+  .contact-info span {
+    display: inline;
+  }
+
+  .dnb {
+    page-break-inside: avoid;
   }
 }
