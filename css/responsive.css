@@ -51,17 +51,13 @@
     display: inline;
   }
 
-  .entry {
-    page-break-inside: avoid;
-  }
-
   @page {
     size: A4;
-    margin: 1cm 0 1cm 0;
+    margin: 1.5cm 0 1.5cm 0;
   }
 
   @page :first {
-    margin: 0 0 0 0;
+    margin: 0 0 1.5cm 0;
   }
 
   * {
