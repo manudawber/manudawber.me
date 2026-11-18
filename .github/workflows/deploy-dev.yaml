@@ -1,0 +1,80 @@
+name: Build & Deploy to Dev (minu-gitops)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GAR_LOCATION: us-central1
+  GAR_REGISTRY: us-central1-docker.pkg.dev/minu-lz-sec-346d/minu-containers
+  IMAGE_NAME: website
+  WIF_PROVIDER: projects/287890259091/locations/global/workloadIdentityPools/minu-github-pool/providers/github-oidc
+  WIF_SERVICE_ACCOUNT: sa-ci-publisher@minu-lz-bootstrap-ce81.iam.gserviceaccount.com
+  GITOPS_REPO: manudawber/minu-gitops
+  GITOPS_OVERLAY_PATH: apps/website/overlays/dev
+
+jobs:
+  build-and-deploy:
+    name: Build Image & Update GitOps Overlay
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout application source
+        uses: actions/checkout@v4
+
+      - name: Compute immutable short SHA tag
+        id: meta
+        run: |
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          echo "tag=sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud via Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${GAR_LOCATION}-docker.pkg.dev" --quiet
+
+      - name: Build and push immutable container image
+        run: |
+          FULL_IMAGE="${GAR_REGISTRY}/${IMAGE_NAME}:${{ steps.meta.outputs.tag }}"
+          docker build -t "${FULL_IMAGE}" .
+          docker push "${FULL_IMAGE}"
+
+      - name: Checkout minu-gitops repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          ref: main
+          ssh-key: ${{ secrets.MINU_GITOPS_DEPLOY_KEY }}
+          path: minu-gitops
+
+      - name: Update Kustomize image tag and push to minu-gitops
+        working-directory: minu-gitops
+        run: |
+          cd "${GITOPS_OVERLAY_PATH}"
+          kustomize edit set image \
+            "${GAR_REGISTRY}/${IMAGE_NAME}=${GAR_REGISTRY}/${IMAGE_NAME}:${{ steps.meta.outputs.tag }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet; then
+            echo "No image tag change detected; skipping commit."
+            exit 0
+          fi
+
+          git add kustomization.yaml
+          git commit -m "chore(apps): bump website dev image to ${{ steps.meta.outputs.tag }}"
+          git push origin main
