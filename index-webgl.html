@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="author" content="Manu Dawber">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manu Dawber — WebGL Optimized</title>
+    <!-- Importing Inter (Sans) for both modes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        /* Base (Light Mode) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc;
+            color: #111;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Dark Mode */
+        .dark body {
+            background-color: #111;
+            color: #fcfcfc;
+        }
+
+        #webgl-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+            display: block;
+        }
+
+        .rgb-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: default;
+        }
+
+        .rgb-layer {
+            font-size: 5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .layer-black {
+            position: relative;
+            color: transparent;
+            z-index: 4;
+            user-select: none;
+        }
+
+        .webgl-fallback .layer-black {
+            color: inherit;
+        }
+
+        @media (min-width: 640px) {
+            .rgb-layer { font-size: 6rem; }
+        }
+        @media (min-width: 768px) {
+            .rgb-layer { font-size: 8rem; }
+        }
+
+        input[type=range] {
+            accent-color: #111;
+        }
+        .dark input[type=range] {
+            accent-color: #fcfcfc;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex flex-col justify-center items-center transition-colors duration-300">
+
+    <!-- WebGL Fullscreen Shader Canvas -->
+    <canvas id="webgl-canvas" aria-hidden="true"></canvas>
+
+    <!-- Theme Toggle -->
+    <button id="theme-toggle" class="fixed top-6 right-6 z-50 p-2 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors" aria-label="Toggle Dark Mode">
+        <svg id="theme-toggle-light-icon" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+        <svg id="theme-toggle-dark-icon" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+    </button>
+
+    <!-- Controls Toggle Button -->
+    <button id="toggle-controls" class="fixed bottom-4 right-4 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-4 py-2 rounded-full shadow-md border border-gray-200 dark:border-gray-700 text-sm font-semibold dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        Tune Effect
+    </button>
+
+    <!-- Floating Control Panel -->
+    <div id="control-panel" class="fixed bottom-16 right-4 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur p-5 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 text-sm w-80 hidden flex-col gap-4 transition-opacity dark:text-gray-200">
+        <div class="flex justify-between items-center mb-1">
+            <h3 class="font-bold text-gray-800 dark:text-white">Effect Parameters</h3>
+            <button id="close-controls" class="text-gray-400 hover:text-gray-800 dark:hover:text-white">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+            </button>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-base">Base Spread</label>
+                <span id="val-base">0.041</span>
+            </div>
+            <input type="range" id="inp-base" min="0" max="0.1" step="0.001" value="0.041" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-safe">Safe Zone Buffer</label>
+                <span id="val-safe">0.05</span>
+            </div>
+            <input type="range" id="inp-safe" min="0" max="1" step="0.01" value="0.05" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-power">Ramp Power (Curve)</label>
+                <span id="val-power">1.5</span>
+            </div>
+            <input type="range" id="inp-power" min="1" max="3" step="0.1" value="1.5" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-mult">Ramp Multiplier</label>
+                <span id="val-mult">0.099</span>
+            </div>
+            <input type="range" id="inp-mult" min="0" max="0.2" step="0.001" value="0.099" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-angle">Angle Offset (Deg)</label>
+                <span id="val-angle">12</span>
+            </div>
+            <input type="range" id="inp-angle" min="0" max="90" step="1" value="12" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-blur">Blur Multiplier</label>
+                <span id="val-blur">0.061</span>
+            </div>
+            <input type="range" id="inp-blur" min="0" max="0.2" step="0.001" value="0.061" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-scale">Scale Multiplier</label>
+                <span id="val-scale">0.003</span>
+            </div>
+            <input type="range" id="inp-scale" min="0" max="0.02" step="0.0001" value="0.003" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-anim">Animation Duration (ms)</label>
+                <span id="val-anim">400</span>
+            </div>
+            <input type="range" id="inp-anim" min="0" max="2000" step="50" value="400" class="w-full">
+        </div>
+
+        <div class="flex items-center gap-2 mt-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <input type="checkbox" id="inp-fps" class="rounded text-gray-800 focus:ring-gray-800 dark:focus:ring-gray-200 cursor-pointer">
+            <label for="inp-fps" class="text-xs text-gray-600 dark:text-gray-300 font-semibold cursor-pointer">Show Performance Monitor</label>
+        </div>
+    </div>
+
+    <!-- FPS Counter Display -->
+    <div id="fps-monitor" class="fixed top-4 left-4 z-50 bg-black/80 text-green-400 font-mono text-xs px-2 py-1 rounded hidden backdrop-blur">
+        FPS: <span id="fps-val">60</span>
+    </div>
+
+    <!-- Main Hero Section (invisible DOM anchor for exact layout metrics & accessibility) -->
+    <main class="flex flex-col items-center z-10 pointer-events-none">
+        <div class="rgb-wrapper" id="name-container">
+            <div class="rgb-layer layer-black" id="text-measure">Manu Dawber</div>
+        </div>
+    </main>
+
+    <script>
+        const CONFIG = {
+            baseSpreadMultiplier: 0.041,
+            safeZoneWidthRatio: 0.05,
+            rampPower: 1.5,
+            rampMultiplier: 0.099,
+            angleOffset: 12,
+            blurMultiplier: 0.061,
+            scaleMultiplier: 0.003,
+            animationDurationMs: 400
+        };
+
+        const TEXT_CONTENT = 'Manu Dawber';
+        const LIGHT_BG = [252 / 255, 252 / 255, 252 / 255];
+        const DARK_BG = [17 / 255, 17 / 255, 17 / 255];
+
+        // Pre-generated Gaussian blur pyramid levels (CSS px sigma + resolution divisor)
+        const BLUR_PYRAMID_SPEC = [
+            { sigma: 0.0,   div: 1 },
+            { sigma: 1.5,   div: 1 },
+            { sigma: 3.5,   div: 1 },
+            { sigma: 7.0,   div: 2 },
+            { sigma: 13.0,  div: 2 },
+            { sigma: 24.0,  div: 4 },
+            { sigma: 42.0,  div: 4 },
+            { sigma: 72.0,  div: 8 },
+            { sigma: 120.0, div: 8 },
+            { sigma: 200.0, div: 16 }
+        ];
+
+        const TEXT_PAD_CSS = 360; // Generous padding so large blurs never clip
+
+        // DOM Elements
+        const canvas = document.getElementById('webgl-canvas');
+        const container = document.getElementById('name-container');
+        const textMeasure = document.getElementById('text-measure');
+        const toggleControlsBtn = document.getElementById('toggle-controls');
+        const closeControlsBtn = document.getElementById('close-controls');
+        const controlPanel = document.getElementById('control-panel');
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        const fpsCheckbox = document.getElementById('inp-fps');
+        const fpsMonitor = document.getElementById('fps-monitor');
+        const fpsVal = document.getElementById('fps-val');
+
+        const inputs = {
+            baseSpreadMultiplier: { el: document.getElementById('inp-base'), val: document.getElementById('val-base') },
+            safeZoneWidthRatio: { el: document.getElementById('inp-safe'), val: document.getElementById('val-safe') },
+            rampPower: { el: document.getElementById('inp-power'), val: document.getElementById('val-power') },
+            rampMultiplier: { el: document.getElementById('inp-mult'), val: document.getElementById('val-mult') },
+            angleOffset: { el: document.getElementById('inp-angle'), val: document.getElementById('val-angle') },
+            blurMultiplier: { el: document.getElementById('inp-blur'), val: document.getElementById('val-blur') },
+            scaleMultiplier: { el: document.getElementById('inp-scale'), val: document.getElementById('val-scale') },
+            animationDurationMs: { el: document.getElementById('inp-anim'), val: document.getElementById('val-anim') }
+        };
+
+        // --- FPS Monitor (identical to index.html) ---
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fpsLoopId;
+
+        function fpsLoop() {
+            const now = performance.now();
+            frameCount++;
+            if (now - lastTime >= 1000) {
+                fpsVal.textContent = frameCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+            fpsLoopId = requestAnimationFrame(fpsLoop);
+        }
+
+        fpsCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                fpsMonitor.classList.remove('hidden');
+                lastTime = performance.now();
+                frameCount = 0;
+                fpsLoop();
+            } else {
+                fpsMonitor.classList.add('hidden');
+                cancelAnimationFrame(fpsLoopId);
+            }
+        });
+
+        // --- Controls Panel ---
+        toggleControlsBtn.addEventListener('click', () => {
+            controlPanel.classList.remove('hidden');
+            controlPanel.classList.add('flex');
+            toggleControlsBtn.classList.add('hidden');
+        });
+
+        closeControlsBtn.addEventListener('click', () => {
+            controlPanel.classList.add('hidden');
+            controlPanel.classList.remove('flex');
+            toggleControlsBtn.classList.remove('hidden');
+        });
+
+        // --- Theme State ---
+        let isDarkMode = false;
+        let bgCurrent = LIGHT_BG.slice();
+        let bgTransition = null;
+        let isDirty = true;
+        let rafId = null;
+
+        function setTheme(isDark, animate = false) {
+            isDarkMode = isDark;
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+
+            const targetBg = isDark ? DARK_BG : LIGHT_BG;
+            if (animate) {
+                bgTransition = {
+                    startTime: performance.now(),
+                    duration: 300,
+                    from: bgCurrent.slice(),
+                    to: targetBg.slice()
+                };
+            } else {
+                bgTransition = null;
+                bgCurrent = targetBg.slice();
+            }
+            markDirty();
+        }
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            setTheme(true, false);
+        } else {
+            setTheme(false, false);
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const nextDark = !isDarkMode;
+            setTheme(nextDark, true);
+            localStorage.setItem('color-theme', nextDark ? 'dark' : 'light');
+        });
+
+        // --- WebGL Shaders (GLSL ES 1.00 — works on both WebGL1 & WebGL2) ---
+        const QUAD_VS = `
+            attribute vec2 a_pos;
+            varying vec2 v_uv;
+            void main() {
+                v_uv = a_pos * 0.5 + 0.5;
+                gl_Position = vec4(a_pos, 0.0, 1.0);
+            }
+        `;
+
+        // 13-tap (center + 6 bilinear pairs) separable Gaussian blur shader
+        const BLUR_FS = `
+            precision highp float;
+            uniform sampler2D u_tex;
+            uniform vec2 u_texelSize;
+            uniform vec2 u_direction;
+            uniform float u_weights[7];
+            uniform float u_offsets[7];
+            varying vec2 v_uv;
+
+            float sampleAlpha(vec2 uv) {
+                if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+                    return 0.0;
+                }
+                return texture2D(u_tex, uv).a;
+            }
+
+            void main() {
+                float sum = sampleAlpha(v_uv) * u_weights[0];
+                vec2 stepDir = u_direction * u_texelSize;
+                for (int i = 1; i < 7; i++) {
+                    vec2 off = stepDir * u_offsets[i];
+                    sum += (sampleAlpha(v_uv + off) + sampleAlpha(v_uv - off)) * u_weights[i];
+                }
+                gl_FragColor = vec4(1.0, 1.0, 1.0, sum);
+            }
+        `;
+
+        // Single-pass composite shader: samples 3 channels from two adjacent blur levels & blends
+        const COMPOSITE_FS = `
+            precision highp float;
+
+            uniform sampler2D u_texA;
+            uniform sampler2D u_texB;
+            uniform float u_blurMix;
+
+            uniform vec2 u_resolution;
+            uniform float u_dpr;
+            uniform vec2 u_centerCss;
+            uniform vec2 u_texSizeCss;
+
+            uniform vec2 u_offset1;
+            uniform vec2 u_offset2;
+            uniform vec2 u_offset3;
+            uniform float u_invScale;
+
+            uniform vec3 u_bgColor;
+            uniform float u_isDark;
+
+            float sampleBlurAlpha(vec2 screenCss, vec2 offsetCss) {
+                vec2 localCss = (screenCss - u_centerCss - offsetCss) * u_invScale;
+                vec2 uv = localCss / u_texSizeCss + 0.5;
+                if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+                    return 0.0;
+                }
+                float aA = texture2D(u_texA, uv).a;
+                if (u_blurMix <= 0.0001) {
+                    return aA;
+                }
+                float aB = texture2D(u_texB, uv).a;
+                return mix(aA, aB, u_blurMix);
+            }
+
+            void main() {
+                vec2 screenCss = vec2(
+                    gl_FragCoord.x / u_dpr,
+                    (u_resolution.y - gl_FragCoord.y) / u_dpr
+                );
+
+                float a1 = sampleBlurAlpha(screenCss, u_offset1);
+                float a2 = sampleBlurAlpha(screenCss, u_offset2);
+                float a3 = sampleBlurAlpha(screenCss, u_offset3);
+
+                vec3 dst = u_bgColor;
+
+                if (u_isDark > 0.5) {
+                    // Dark mode: RGB Screen blend on #111111
+                    dst = 1.0 - (1.0 - dst) * (1.0 - vec3(1.0, 0.0, 0.0) * a1);
+                    dst = 1.0 - (1.0 - dst) * (1.0 - vec3(0.0, 1.0, 0.0) * a2);
+                    dst = 1.0 - (1.0 - dst) * (1.0 - vec3(0.0, 0.0, 1.0) * a3);
+                } else {
+                    // Light mode: CMY Multiply blend on #fcfcfc
+                    dst *= mix(vec3(1.0), vec3(0.0, 1.0, 1.0), a1);
+                    dst *= mix(vec3(1.0), vec3(1.0, 0.0, 1.0), a2);
+                    dst *= mix(vec3(1.0), vec3(1.0, 1.0, 0.0), a3);
+                }
+
+                gl_FragColor = vec4(dst, 1.0);
+            }
+        `;
+
+        // --- WebGL Engine ---
+        let gl = null;
+        let quadBuffer = null;
+        let blurProgram = null;
+        let blurLocs = null;
+        let compositeProgram = null;
+        let compositeLocs = null;
+        let blurLevels = []; // [{ sigma, texture, width, height }]
+        let texSizeCss = { width: 1, height: 1 };
+        let dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let cachedRect = { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, centerX: 0, centerY: 0 };
+        let webglReady = false;
+
+        function compileShader(glCtx, type, source) {
+            const shader = glCtx.createShader(type);
+            glCtx.shaderSource(shader, source);
+            glCtx.compileShader(shader);
+            if (!glCtx.getShaderParameter(shader, glCtx.COMPILE_STATUS)) {
+                console.error('Shader compile error:', glCtx.getShaderInfoLog(shader));
+                glCtx.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        function createProgram(glCtx, vsSource, fsSource) {
+            const vs = compileShader(glCtx, glCtx.VERTEX_SHADER, vsSource);
+            const fs = compileShader(glCtx, glCtx.FRAGMENT_SHADER, fsSource);
+            if (!vs || !fs) return null;
+            const prog = glCtx.createProgram();
+            glCtx.attachShader(prog, vs);
+            glCtx.attachShader(prog, fs);
+            glCtx.linkProgram(prog);
+            glCtx.deleteShader(vs);
+            glCtx.deleteShader(fs);
+            if (!glCtx.getProgramParameter(prog, glCtx.LINK_STATUS)) {
+                console.error('Program link error:', glCtx.getProgramInfoLog(prog));
+                glCtx.deleteProgram(prog);
+                return null;
+            }
+            return prog;
+        }
+
+        function createTexture2D(glCtx, width, height, source = null) {
+            const tex = glCtx.createTexture();
+            glCtx.bindTexture(glCtx.TEXTURE_2D, tex);
+            glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.LINEAR);
+            glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.LINEAR);
+            glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE);
+            glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE);
+            if (source) {
+                glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, glCtx.RGBA, glCtx.UNSIGNED_BYTE, source);
+            } else {
+                glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, width, height, 0, glCtx.RGBA, glCtx.UNSIGNED_BYTE, null);
+            }
+            return tex;
+        }
+
+        function computeGaussianKernel(sigma) {
+            const weights = new Float32Array(7);
+            const offsets = new Float32Array(7);
+
+            if (sigma <= 0.001) {
+                weights[0] = 1.0;
+                return { weights, offsets };
+            }
+
+            const raw = new Float64Array(13);
+            const inv2Sigma2 = 0.5 / (sigma * sigma);
+            let total = 1.0;
+            raw[0] = 1.0;
+            for (let i = 1; i <= 12; i++) {
+                raw[i] = Math.exp(-i * i * inv2Sigma2);
+                total += 2.0 * raw[i];
+            }
+            for (let i = 0; i <= 12; i++) {
+                raw[i] /= total;
+            }
+
+            weights[0] = raw[0];
+            offsets[0] = 0.0;
+            for (let p = 0; p < 6; p++) {
+                const a = p * 2 + 1;
+                const b = a + 1;
+                const wSum = raw[a] + raw[b];
+                weights[p + 1] = wSum;
+                offsets[p + 1] = wSum > 1e-12 ? (a * raw[a] + b * raw[b]) / wSum : a;
+            }
+
+            return { weights, offsets };
+        }
+
+        function destroyBlurPyramid() {
+            if (!gl) return;
+            for (const level of blurLevels) {
+                if (level.texture) gl.deleteTexture(level.texture);
+            }
+            blurLevels = [];
+        }
+
+        function initWebGL() {
+            const opts = {
+                alpha: false,
+                antialias: false,
+                depth: false,
+                stencil: false,
+                preserveDrawingBuffer: false,
+                powerPreference: 'high-performance'
+            };
+
+            gl = canvas.getContext('webgl2', opts)
+                || canvas.getContext('webgl', opts)
+                || canvas.getContext('experimental-webgl', opts);
+
+            if (!gl) {
+                document.body.classList.add('webgl-fallback');
+                return false;
+            }
+
+            blurProgram = createProgram(gl, QUAD_VS, BLUR_FS);
+            compositeProgram = createProgram(gl, QUAD_VS, COMPOSITE_FS);
+            if (!blurProgram || !compositeProgram) {
+                document.body.classList.add('webgl-fallback');
+                return false;
+            }
+
+            quadBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1, -1,  1, -1, -1,  1,
+                -1,  1,  1, -1,  1,  1
+            ]), gl.STATIC_DRAW);
+
+            blurLocs = {
+                a_pos: gl.getAttribLocation(blurProgram, 'a_pos'),
+                u_tex: gl.getUniformLocation(blurProgram, 'u_tex'),
+                u_texelSize: gl.getUniformLocation(blurProgram, 'u_texelSize'),
+                u_direction: gl.getUniformLocation(blurProgram, 'u_direction'),
+                u_weights: gl.getUniformLocation(blurProgram, 'u_weights[0]') || gl.getUniformLocation(blurProgram, 'u_weights'),
+                u_offsets: gl.getUniformLocation(blurProgram, 'u_offsets[0]') || gl.getUniformLocation(blurProgram, 'u_offsets')
+            };
+
+            compositeLocs = {
+                a_pos: gl.getAttribLocation(compositeProgram, 'a_pos'),
+                u_texA: gl.getUniformLocation(compositeProgram, 'u_texA'),
+                u_texB: gl.getUniformLocation(compositeProgram, 'u_texB'),
+                u_blurMix: gl.getUniformLocation(compositeProgram, 'u_blurMix'),
+                u_resolution: gl.getUniformLocation(compositeProgram, 'u_resolution'),
+                u_dpr: gl.getUniformLocation(compositeProgram, 'u_dpr'),
+                u_centerCss: gl.getUniformLocation(compositeProgram, 'u_centerCss'),
+                u_texSizeCss: gl.getUniformLocation(compositeProgram, 'u_texSizeCss'),
+                u_offset1: gl.getUniformLocation(compositeProgram, 'u_offset1'),
+                u_offset2: gl.getUniformLocation(compositeProgram, 'u_offset2'),
+                u_offset3: gl.getUniformLocation(compositeProgram, 'u_offset3'),
+                u_invScale: gl.getUniformLocation(compositeProgram, 'u_invScale'),
+                u_bgColor: gl.getUniformLocation(compositeProgram, 'u_bgColor'),
+                u_isDark: gl.getUniformLocation(compositeProgram, 'u_isDark')
+            };
+
+            gl.disable(gl.DEPTH_TEST);
+            gl.disable(gl.BLEND);
+            webglReady = true;
+            return true;
+        }
+
+        function updateLayoutMetrics() {
+            const rect = container.getBoundingClientRect();
+            cachedRect = {
+                left: rect.left,
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom,
+                width: rect.width,
+                height: rect.height,
+                centerX: rect.left + rect.width / 2,
+                centerY: rect.top + rect.height / 2
+            };
+        }
+
+        function drawTextWithLetterSpacing(ctx, text, centerX, centerY, letterSpacingPx) {
+            if ('letterSpacing' in ctx) {
+                ctx.letterSpacing = `${letterSpacingPx}px`;
+                ctx.fillText(text, centerX, centerY);
+                return;
+            }
+            // Fallback for browsers without CanvasRenderingContext2D.letterSpacing
+            const chars = Array.from(text);
+            let totalWidth = 0;
+            const widths = chars.map((ch) => {
+                const w = ctx.measureText(ch).width;
+                totalWidth += w;
+                return w;
+            });
+            totalWidth += letterSpacingPx * (chars.length - 1);
+            let x = centerX - totalWidth / 2;
+            ctx.textAlign = 'left';
+            for (let i = 0; i < chars.length; i++) {
+                ctx.fillText(chars[i], x, centerY);
+                x += widths[i] + letterSpacingPx;
+            }
+        }
+
+        function buildTextAndBlurPyramid() {
+            if (!webglReady || !gl || gl.isContextLost()) return;
+
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            canvas.width = Math.max(1, Math.round(vw * dpr));
+            canvas.height = Math.max(1, Math.round(vh * dpr));
+
+            updateLayoutMetrics();
+
+            const computed = window.getComputedStyle(textMeasure);
+            const fontSizePx = parseFloat(computed.fontSize) || 128;
+            const letterSpacingPx = -0.05 * fontSizePx;
+
+            const textWidthCss = Math.ceil(cachedRect.width || fontSizePx * 6);
+            const textHeightCss = Math.ceil(cachedRect.height || fontSizePx);
+
+            texSizeCss = {
+                width: textWidthCss + TEXT_PAD_CSS * 2,
+                height: textHeightCss + TEXT_PAD_CSS * 2
+            };
+
+            const maxTexSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+            let texScale = dpr;
+            const maxDim = Math.max(texSizeCss.width * texScale, texSizeCss.height * texScale);
+            if (maxDim > maxTexSize) {
+                texScale *= (maxTexSize / maxDim);
+            }
+
+            const baseW = Math.max(1, Math.round(texSizeCss.width * texScale));
+            const baseH = Math.max(1, Math.round(texSizeCss.height * texScale));
+
+            // 1. Render crisp static text ONCE to offscreen 2D canvas
+            const offscreen = document.createElement('canvas');
+            offscreen.width = baseW;
+            offscreen.height = baseH;
+            const ctx = offscreen.getContext('2d');
+            ctx.clearRect(0, 0, baseW, baseH);
+            ctx.save();
+            ctx.scale(texScale, texScale);
+            ctx.font = `900 ${fontSizePx}px 'Inter', sans-serif`;
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            drawTextWithLetterSpacing(ctx, TEXT_CONTENT, texSizeCss.width / 2, texSizeCss.height / 2, letterSpacingPx);
+            ctx.restore();
+
+            // 2. Upload sharp level 0 texture
+            destroyBlurPyramid();
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+            const baseTex = createTexture2D(gl, baseW, baseH, offscreen);
+            blurLevels.push({
+                sigma: 0.0,
+                texture: baseTex,
+                width: baseW,
+                height: baseH
+            });
+
+            // 3. Generate Gaussian blur pyramid levels on GPU via ping-pong FBOs
+            const fbo = gl.createFramebuffer();
+            gl.useProgram(blurProgram);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+            gl.enableVertexAttribArray(blurLocs.a_pos);
+            gl.vertexAttribPointer(blurLocs.a_pos, 2, gl.FLOAT, false, 0, 0);
+            gl.uniform1i(blurLocs.u_tex, 0);
+            gl.activeTexture(gl.TEXTURE0);
+
+            const MAX_SIGMA_PER_PASS = 4.0; // Within 3-sigma radius of 13-tap bilinear kernel
+
+            for (let i = 1; i < BLUR_PYRAMID_SPEC.length; i++) {
+                const prev = blurLevels[i - 1];
+                const spec = BLUR_PYRAMID_SPEC[i];
+                const targetW = Math.max(16, Math.round(baseW / spec.div));
+                const targetH = Math.max(16, Math.round(baseH / spec.div));
+
+                const sigmaDeltaCss = Math.sqrt(Math.max(0, spec.sigma * spec.sigma - prev.sigma * prev.sigma));
+                const sigmaTexels = sigmaDeltaCss * (targetW / texSizeCss.width);
+
+                const numPasses = Math.max(1, Math.ceil((sigmaTexels / MAX_SIGMA_PER_PASS) ** 2));
+                const passSigma = sigmaTexels / Math.sqrt(numPasses);
+                const kernel = computeGaussianKernel(passSigma);
+
+                const pingTex = createTexture2D(gl, targetW, targetH, null);
+                const pongTex = createTexture2D(gl, targetW, targetH, null);
+
+                gl.viewport(0, 0, targetW, targetH);
+                gl.uniform1fv(blurLocs.u_weights, kernel.weights);
+                gl.uniform1fv(blurLocs.u_offsets, kernel.offsets);
+
+                let srcTex = prev.texture;
+                gl.uniform2f(blurLocs.u_texelSize, 1.0 / targetW, 1.0 / targetH);
+
+                for (let p = 0; p < numPasses; p++) {
+                    // Horizontal pass: srcTex -> pingTex
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+                    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pingTex, 0);
+                    gl.bindTexture(gl.TEXTURE_2D, srcTex);
+                    gl.uniform2f(blurLocs.u_direction, 1.0, 0.0);
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+                    // Vertical pass: pingTex -> pongTex
+                    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pongTex, 0);
+                    gl.bindTexture(gl.TEXTURE_2D, pingTex);
+                    gl.uniform2f(blurLocs.u_direction, 0.0, 1.0);
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+                    srcTex = pongTex;
+                }
+
+                // Keep pongTex as this level's texture; discard pingTex
+                gl.deleteTexture(pingTex);
+                blurLevels.push({
+                    sigma: spec.sigma,
+                    texture: pongTex,
+                    width: targetW,
+                    height: targetH
+                });
+            }
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.deleteFramebuffer(fbo);
+            markDirty();
+        }
+
+        function getBlurLevelPair(blurPx) {
+            const lastIdx = blurLevels.length - 1;
+            if (blurPx <= 0 || lastIdx <= 0) {
+                return { texA: blurLevels[0].texture, texB: blurLevels[0].texture, mix: 0.0 };
+            }
+            if (blurPx >= blurLevels[lastIdx].sigma) {
+                return { texA: blurLevels[lastIdx].texture, texB: blurLevels[lastIdx].texture, mix: 0.0 };
+            }
+            for (let i = 0; i < lastIdx; i++) {
+                const a = blurLevels[i];
+                const b = blurLevels[i + 1];
+                if (blurPx >= a.sigma && blurPx <= b.sigma) {
+                    const t = (blurPx - a.sigma) / (b.sigma - a.sigma);
+                    return { texA: a.texture, texB: b.texture, mix: t };
+                }
+            }
+            return { texA: blurLevels[0].texture, texB: blurLevels[0].texture, mix: 0.0 };
+        }
+
+        // --- Interactive Effect State & Smooth Transitions ---
+        const REST_STATE = {
+            tx1: 0, ty1: 0,
+            tx2: 0, ty2: 0,
+            tx3: 0, ty3: 0,
+            scale: 1,
+            blur: 0
+        };
+
+        let currentState = { ...REST_STATE };
+        let targetState = { ...REST_STATE };
+        let transition = null;
+
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+        let isActive = false;
+
+        function computeTargetState(clientX, clientY) {
+            const rect = cachedRect;
+            const dxCenter = rect.centerX - clientX;
+            const dyCenter = rect.centerY - clientY;
+            const centerDistance = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+
+            const dxBox = Math.max(rect.left - clientX, 0, clientX - rect.right);
+            const dyBox = Math.max(rect.top - clientY, 0, clientY - rect.bottom);
+            const boxDistance = Math.sqrt(dxBox * dxBox + dyBox * dyBox);
+
+            const safeZone = rect.width * CONFIG.safeZoneWidthRatio;
+            let spread = centerDistance * CONFIG.baseSpreadMultiplier;
+
+            if (boxDistance > safeZone) {
+                const excessDistance = boxDistance - safeZone;
+                spread += Math.pow(excessDistance, CONFIG.rampPower) * CONFIG.rampMultiplier;
+            }
+
+            const baseAngle = Math.atan2(dyCenter, dxCenter);
+            const offsetRad = (CONFIG.angleOffset * Math.PI) / 180;
+
+            const angle1 = baseAngle - offsetRad;
+            const angle2 = baseAngle;
+            const angle3 = baseAngle + offsetRad;
+
+            return {
+                tx1: Math.cos(angle1) * spread,
+                ty1: Math.sin(angle1) * spread,
+                tx2: Math.cos(angle2) * spread,
+                ty2: Math.sin(angle2) * spread,
+                tx3: Math.cos(angle3) * spread,
+                ty3: Math.sin(angle3) * spread,
+                scale: 1 + (spread * CONFIG.scaleMultiplier),
+                blur: spread * CONFIG.blurMultiplier
+            };
+        }
+
+        function easeOutCubic(t) {
+            const inv = 1 - t;
+            return 1 - inv * inv * inv;
+        }
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function renderWebGL() {
+            if (!webglReady || !gl || gl.isContextLost() || blurLevels.length === 0) return;
+
+            const { texA, texB, mix } = getBlurLevelPair(currentState.blur);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            gl.useProgram(compositeProgram);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+            gl.enableVertexAttribArray(compositeLocs.a_pos);
+            gl.vertexAttribPointer(compositeLocs.a_pos, 2, gl.FLOAT, false, 0, 0);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texA);
+            gl.uniform1i(compositeLocs.u_texA, 0);
+
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, texB);
+            gl.uniform1i(compositeLocs.u_texB, 1);
+
+            gl.uniform1f(compositeLocs.u_blurMix, mix);
+            gl.uniform2f(compositeLocs.u_resolution, canvas.width, canvas.height);
+            gl.uniform1f(compositeLocs.u_dpr, dpr);
+            gl.uniform2f(compositeLocs.u_centerCss, cachedRect.centerX, cachedRect.centerY);
+            gl.uniform2f(compositeLocs.u_texSizeCss, texSizeCss.width, texSizeCss.height);
+
+            gl.uniform2f(compositeLocs.u_offset1, currentState.tx1, currentState.ty1);
+            gl.uniform2f(compositeLocs.u_offset2, currentState.tx2, currentState.ty2);
+            gl.uniform2f(compositeLocs.u_offset3, currentState.tx3, currentState.ty3);
+            gl.uniform1f(compositeLocs.u_invScale, 1.0 / Math.max(0.001, currentState.scale));
+
+            gl.uniform3f(compositeLocs.u_bgColor, bgCurrent[0], bgCurrent[1], bgCurrent[2]);
+            gl.uniform1f(compositeLocs.u_isDark, isDarkMode ? 1.0 : 0.0);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+
+        function tick(now) {
+            rafId = null;
+
+            // Update smooth theme background color transition
+            if (bgTransition) {
+                const rawT = Math.min(1, (now - bgTransition.startTime) / bgTransition.duration);
+                const t = easeOutCubic(rawT);
+                bgCurrent[0] = lerp(bgTransition.from[0], bgTransition.to[0], t);
+                bgCurrent[1] = lerp(bgTransition.from[1], bgTransition.to[1], t);
+                bgCurrent[2] = lerp(bgTransition.from[2], bgTransition.to[2], t);
+                if (rawT >= 1) {
+                    bgCurrent = bgTransition.to.slice();
+                    bgTransition = null;
+                }
+                isDirty = true;
+            }
+
+            // Update smooth mouseenter/mouseleave transition
+            if (transition) {
+                const rawT = transition.duration <= 0
+                    ? 1
+                    : Math.min(1, (now - transition.startTime) / transition.duration);
+                const t = easeOutCubic(rawT);
+                const from = transition.from;
+                currentState.tx1 = lerp(from.tx1, targetState.tx1, t);
+                currentState.ty1 = lerp(from.ty1, targetState.ty1, t);
+                currentState.tx2 = lerp(from.tx2, targetState.tx2, t);
+                currentState.ty2 = lerp(from.ty2, targetState.ty2, t);
+                currentState.tx3 = lerp(from.tx3, targetState.tx3, t);
+                currentState.ty3 = lerp(from.ty3, targetState.ty3, t);
+                currentState.scale = lerp(from.scale, targetState.scale, t);
+                currentState.blur = lerp(from.blur, targetState.blur, t);
+
+                if (rawT >= 1) {
+                    currentState = { ...targetState };
+                    transition = null;
+                }
+                isDirty = true;
+            } else if (isDirty) {
+                currentState = { ...targetState };
+            }
+
+            if (isDirty) {
+                renderWebGL();
+                isDirty = false;
+            }
+
+            // Only keep animating while a transition is in flight
+            if (transition || bgTransition) {
+                rafId = requestAnimationFrame(tick);
+            }
+        }
+
+        function markDirty() {
+            isDirty = true;
+            if (rafId === null) {
+                rafId = requestAnimationFrame(tick);
+            }
+        }
+
+        // --- Slider Inputs ---
+        Object.keys(inputs).forEach((key) => {
+            inputs[key].el.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                CONFIG[key] = value;
+                inputs[key].val.textContent = value;
+
+                if (key !== 'animationDurationMs' && isActive) {
+                    targetState = computeTargetState(cursorX, cursorY);
+                    markDirty();
+                }
+            });
+        });
+
+        // --- Mouse Interaction ---
+        function handleMouseMove(e) {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+
+            const entering = !isActive;
+            isActive = true;
+            targetState = computeTargetState(cursorX, cursorY);
+
+            if (entering && CONFIG.animationDurationMs > 0) {
+                transition = {
+                    startTime: performance.now(),
+                    duration: CONFIG.animationDurationMs,
+                    from: { ...currentState }
+                };
+            }
+
+            markDirty();
+        }
+
+        function resetEffect() {
+            if (!isActive && !transition) return;
+            isActive = false;
+            targetState = { ...REST_STATE };
+
+            if (CONFIG.animationDurationMs > 0) {
+                transition = {
+                    startTime: performance.now(),
+                    duration: CONFIG.animationDurationMs,
+                    from: { ...currentState }
+                };
+            } else {
+                transition = null;
+            }
+
+            markDirty();
+        }
+
+        window.addEventListener('mousemove', handleMouseMove, { passive: true });
+        document.addEventListener('mouseleave', resetEffect);
+        document.addEventListener('mouseout', (e) => {
+            if (!e.relatedTarget) {
+                resetEffect();
+            }
+        });
+
+        // --- Resize & WebGL Context Recovery ---
+        let lastBuiltFontSize = 0;
+        let lastBuiltDpr = 0;
+        let resizeTimer = null;
+
+        function resizeCanvasBackbuffer() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.max(1, Math.round(window.innerWidth * dpr));
+            canvas.height = Math.max(1, Math.round(window.innerHeight * dpr));
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvasBackbuffer();
+            updateLayoutMetrics();
+            if (isActive) {
+                targetState = computeTargetState(cursorX, cursorY);
+            }
+            markDirty();
+
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const currentFontSize = parseFloat(window.getComputedStyle(textMeasure).fontSize) || 128;
+                const currentDpr = Math.min(window.devicePixelRatio || 1, 2);
+                if (currentFontSize !== lastBuiltFontSize || currentDpr !== lastBuiltDpr || blurLevels.length === 0) {
+                    buildTextAndBlurPyramid();
+                    lastBuiltFontSize = currentFontSize;
+                    lastBuiltDpr = currentDpr;
+                }
+                if (isActive) {
+                    targetState = computeTargetState(cursorX, cursorY);
+                }
+                markDirty();
+            }, 120);
+        });
+
+        canvas.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            webglReady = false;
+            blurLevels = [];
+        });
+
+        canvas.addEventListener('webglcontextrestored', () => {
+            if (initWebGL()) {
+                buildTextAndBlurPyramid();
+                lastBuiltFontSize = parseFloat(window.getComputedStyle(textMeasure).fontSize) || 128;
+                lastBuiltDpr = Math.min(window.devicePixelRatio || 1, 2);
+                markDirty();
+            }
+        });
+
+        // --- Bootstrap after fonts are ready ---
+        if (initWebGL()) {
+            const start = () => {
+                buildTextAndBlurPyramid();
+                lastBuiltFontSize = parseFloat(window.getComputedStyle(textMeasure).fontSize) || 128;
+                lastBuiltDpr = Math.min(window.devicePixelRatio || 1, 2);
+                markDirty();
+            };
+
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(start);
+            } else {
+                window.addEventListener('load', start);
+            }
+        }
+    </script>
+</body>
+</html>

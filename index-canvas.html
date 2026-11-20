@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="author" content="Manu Dawber">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manu Dawber — Canvas2D Optimized</title>
+    <!-- Importing Inter (Sans) for both modes -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        /* Base (Light Mode) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc;
+            color: #111;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Dark Mode */
+        .dark body {
+            background-color: #111;
+            color: #fcfcfc;
+        }
+
+        #effect-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .rgb-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: default;
+        }
+
+        /* Invisible DOM anchor matching index.html typography for exact bounding box & accessibility */
+        .rgb-measure {
+            font-size: 5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            line-height: 1;
+            white-space: nowrap;
+            color: transparent;
+            user-select: none;
+        }
+
+        @media (min-width: 640px) {
+            .rgb-measure { font-size: 6rem; }
+        }
+        @media (min-width: 768px) {
+            .rgb-measure { font-size: 8rem; }
+        }
+
+        input[type=range] {
+            accent-color: #111;
+        }
+        .dark input[type=range] {
+            accent-color: #fcfcfc;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex flex-col justify-center items-center transition-colors duration-300">
+
+    <!-- Fullscreen Canvas2D Renderer -->
+    <canvas id="effect-canvas" aria-hidden="true"></canvas>
+
+    <!-- Theme Toggle -->
+    <button id="theme-toggle" class="fixed top-6 right-6 z-50 p-2 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors" aria-label="Toggle Dark Mode">
+        <svg id="theme-toggle-light-icon" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+        <svg id="theme-toggle-dark-icon" class="hidden w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+    </button>
+
+    <!-- Controls Toggle Button -->
+    <button id="toggle-controls" class="fixed bottom-4 right-4 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-4 py-2 rounded-full shadow-md border border-gray-200 dark:border-gray-700 text-sm font-semibold dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        Tune Effect
+    </button>
+
+    <!-- Floating Control Panel -->
+    <div id="control-panel" class="fixed bottom-16 right-4 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur p-5 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 text-sm w-80 hidden flex-col gap-4 transition-opacity dark:text-gray-200">
+        <div class="flex justify-between items-center mb-1">
+            <h3 class="font-bold text-gray-800 dark:text-white">Effect Parameters</h3>
+            <button id="close-controls" class="text-gray-400 hover:text-gray-800 dark:hover:text-white">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+            </button>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-base">Base Spread</label>
+                <span id="val-base">0.041</span>
+            </div>
+            <input type="range" id="inp-base" min="0" max="0.1" step="0.001" value="0.041" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-safe">Safe Zone Buffer</label>
+                <span id="val-safe">0.05</span>
+            </div>
+            <input type="range" id="inp-safe" min="0" max="1" step="0.01" value="0.05" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-power">Ramp Power (Curve)</label>
+                <span id="val-power">1.5</span>
+            </div>
+            <input type="range" id="inp-power" min="1" max="3" step="0.1" value="1.5" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-mult">Ramp Multiplier</label>
+                <span id="val-mult">0.099</span>
+            </div>
+            <input type="range" id="inp-mult" min="0" max="0.2" step="0.001" value="0.099" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-angle">Angle Offset (Deg)</label>
+                <span id="val-angle">12</span>
+            </div>
+            <input type="range" id="inp-angle" min="0" max="90" step="1" value="12" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-blur">Blur Multiplier</label>
+                <span id="val-blur">0.061</span>
+            </div>
+            <input type="range" id="inp-blur" min="0" max="0.2" step="0.001" value="0.061" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-scale">Scale Multiplier</label>
+                <span id="val-scale">0.003</span>
+            </div>
+            <input type="range" id="inp-scale" min="0" max="0.02" step="0.0001" value="0.003" class="w-full">
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-400">
+                <label for="inp-anim">Animation Duration (ms)</label>
+                <span id="val-anim">400</span>
+            </div>
+            <input type="range" id="inp-anim" min="0" max="2000" step="50" value="400" class="w-full">
+        </div>
+
+        <div class="flex items-center gap-2 mt-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <input type="checkbox" id="inp-fps" class="rounded text-gray-800 focus:ring-gray-800 dark:focus:ring-gray-200 cursor-pointer">
+            <label for="inp-fps" class="text-xs text-gray-600 dark:text-gray-300 font-semibold cursor-pointer">Show Performance Monitor</label>
+        </div>
+    </div>
+
+    <!-- FPS Counter Display -->
+    <div id="fps-monitor" class="fixed top-4 left-4 z-50 bg-black/80 text-green-400 font-mono text-xs px-2 py-1 rounded hidden backdrop-blur">
+        FPS: <span id="fps-val">60</span>
+    </div>
+
+    <!-- Main Hero Section (invisible accessible bounds anchor) -->
+    <main class="flex flex-col items-center z-10">
+        <div class="rgb-wrapper" id="name-container">
+            <h1 class="rgb-measure" id="name-measure">Manu Dawber</h1>
+        </div>
+    </main>
+
+    <script>
+        const CONFIG = {
+            baseSpreadMultiplier: 0.041,
+            safeZoneWidthRatio: 0.05,
+            rampPower: 1.5,
+            rampMultiplier: 0.099,
+            angleOffset: 12,
+            blurMultiplier: 0.061,
+            scaleMultiplier: 0.003,
+            animationDurationMs: 400
+        };
+
+        const TEXT = 'Manu Dawber';
+
+        // Pre-blurred mipmap pyramid configuration (blur radius in CSS px, target downscale factor)
+        // Heavy blurs are downscaled to 1/2 - 1/5 resolution for fast generation and tiny memory footprint.
+        const PYRAMID_SPEC = [
+            { blur: 0,   maxScale: 2.0  },
+            { blur: 2,   maxScale: 2.0  },
+            { blur: 6,   maxScale: 1.0  },
+            { blur: 14,  maxScale: 0.5  },
+            { blur: 30,  maxScale: 0.5  },
+            { blur: 60,  maxScale: 0.25 },
+            { blur: 110, maxScale: 0.25 },
+            { blur: 200, maxScale: 0.2  }
+        ];
+
+        // Channel colors in draw order (back to front: layer3, layer2, layer1)
+        const THEME_PALETTES = {
+            light: {
+                colors: ['#FFFF00', '#FF00FF', '#00FFFF'], // Y, M, C
+                composite: 'multiply'
+            },
+            dark: {
+                colors: ['#0000FF', '#00FF00', '#FF0000'], // B, G, R
+                composite: 'screen'
+            }
+        };
+
+        // DOM references
+        const canvas = document.getElementById('effect-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('name-container');
+        const measureEl = document.getElementById('name-measure');
+
+        const toggleControlsBtn = document.getElementById('toggle-controls');
+        const closeControlsBtn = document.getElementById('close-controls');
+        const controlPanel = document.getElementById('control-panel');
+
+        const inputs = {
+            baseSpreadMultiplier: { el: document.getElementById('inp-base'), val: document.getElementById('val-base') },
+            safeZoneWidthRatio: { el: document.getElementById('inp-safe'), val: document.getElementById('val-safe') },
+            rampPower: { el: document.getElementById('inp-power'), val: document.getElementById('val-power') },
+            rampMultiplier: { el: document.getElementById('inp-mult'), val: document.getElementById('val-mult') },
+            angleOffset: { el: document.getElementById('inp-angle'), val: document.getElementById('val-angle') },
+            blurMultiplier: { el: document.getElementById('inp-blur'), val: document.getElementById('val-blur') },
+            scaleMultiplier: { el: document.getElementById('inp-scale'), val: document.getElementById('val-scale') },
+            animationDurationMs: { el: document.getElementById('inp-anim'), val: document.getElementById('val-anim') }
+        };
+
+        const fpsCheckbox = document.getElementById('inp-fps');
+        const fpsMonitor = document.getElementById('fps-monitor');
+        const fpsVal = document.getElementById('fps-val');
+
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        // Reusable offscreen scratch canvas for artifact-free crossfading between 2 blur levels
+        const scratchCanvas = document.createElement('canvas');
+        const scratchCtx = scratchCanvas.getContext('2d');
+
+        // Runtime state
+        let isDarkTheme = false;
+        let dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let viewportW = window.innerWidth;
+        let viewportH = window.innerHeight;
+        let spritePyramid = null; // Array of 3 channels (layer3, layer2, layer1), each an array of pre-blurred sprite objects
+        let lastFontSize = 0;
+
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+        let isActive = false;
+
+        const REST_STATE = {
+            tx1: 0, ty1: 0,
+            tx2: 0, ty2: 0,
+            tx3: 0, ty3: 0,
+            scale: 1,
+            blur: 0
+        };
+
+        let currentState = { ...REST_STATE };
+        let startState = { ...REST_STATE };
+        let targetState = { ...REST_STATE };
+
+        let isTransitioning = false;
+        let transitionStartTime = 0;
+        let transitionDuration = CONFIG.animationDurationMs;
+
+        let needsRender = false;
+        let rafId = null;
+
+        // --- FPS Monitor (identical behavior to index.html) ---
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fpsLoopId;
+
+        function fpsLoop() {
+            const now = performance.now();
+            frameCount++;
+            if (now - lastTime >= 1000) {
+                fpsVal.textContent = frameCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+            fpsLoopId = requestAnimationFrame(fpsLoop);
+        }
+
+        fpsCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                fpsMonitor.classList.remove('hidden');
+                lastTime = performance.now();
+                frameCount = 0;
+                fpsLoop();
+            } else {
+                fpsMonitor.classList.add('hidden');
+                cancelAnimationFrame(fpsLoopId);
+            }
+        });
+
+        // --- Controls Panel ---
+        toggleControlsBtn.addEventListener('click', () => {
+            controlPanel.classList.remove('hidden');
+            controlPanel.classList.add('flex');
+            toggleControlsBtn.classList.add('hidden');
+        });
+
+        closeControlsBtn.addEventListener('click', () => {
+            controlPanel.classList.add('hidden');
+            controlPanel.classList.remove('flex');
+            toggleControlsBtn.classList.remove('hidden');
+        });
+
+        Object.keys(inputs).forEach(key => {
+            inputs[key].el.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                CONFIG[key] = value;
+                inputs[key].val.textContent = value;
+
+                if (key !== 'animationDurationMs' && isActive) {
+                    targetState = computeTargetState(cursorX, cursorY);
+                    if (!isTransitioning) {
+                        currentState = { ...targetState };
+                    }
+                    markDirty();
+                }
+            });
+        });
+
+        // --- Pre-blurred Sprite Pyramid Generation ---
+        function drawTextCentered(targetCtx, text, cx, cy, fontSize) {
+            const trackingPx = -0.05 * fontSize;
+            targetCtx.font = `900 ${fontSize}px Inter, sans-serif`;
+            targetCtx.textBaseline = 'middle';
+
+            if ('letterSpacing' in targetCtx) {
+                targetCtx.letterSpacing = `${trackingPx}px`;
+                targetCtx.textAlign = 'center';
+                targetCtx.fillText(text, cx, cy);
+            } else {
+                // Fallback for browsers without Canvas2D letterSpacing
+                targetCtx.textAlign = 'left';
+                const chars = Array.from(text);
+                let totalWidth = 0;
+                const widths = chars.map(ch => {
+                    const w = targetCtx.measureText(ch).width;
+                    totalWidth += w;
+                    return w;
+                });
+                totalWidth += trackingPx * (chars.length - 1);
+                let x = cx - totalWidth / 2;
+                for (let i = 0; i < chars.length; i++) {
+                    targetCtx.fillText(chars[i], x, cy);
+                    x += widths[i] + trackingPx;
+                }
+            }
+        }
+
+        function buildSpritePyramid() {
+            const style = getComputedStyle(measureEl);
+            const fontSize = parseFloat(style.fontSize) || 128;
+            const rect = container.getBoundingClientRect();
+            const textW = Math.ceil(rect.width) || Math.ceil(fontSize * 6.5);
+            const textH = Math.ceil(rect.height) || Math.ceil(fontSize * 1.1);
+            lastFontSize = fontSize;
+
+            const palette = isDarkTheme ? THEME_PALETTES.dark : THEME_PALETTES.light;
+            const pyramid = [[], [], []];
+
+            for (let levelIdx = 0; levelIdx < PYRAMID_SPEC.length; levelIdx++) {
+                const { blur, maxScale } = PYRAMID_SPEC[levelIdx];
+                const resScale = Math.min(dpr, maxScale);
+                // ~3x blur radius padding (+ extra margin for glyph overhang) so heavy blurs never clip
+                const pad = Math.ceil(blur * 3) + Math.ceil(fontSize * 0.25);
+                const logicalW = textW + pad * 2;
+                const logicalH = textH + pad * 2;
+                const pixelW = Math.max(1, Math.ceil(logicalW * resScale));
+                const pixelH = Math.max(1, Math.ceil(logicalH * resScale));
+                const blurPx = blur * resScale;
+
+                for (let ch = 0; ch < 3; ch++) {
+                    const offscreen = document.createElement('canvas');
+                    offscreen.width = pixelW;
+                    offscreen.height = pixelH;
+                    const octx = offscreen.getContext('2d');
+
+                    octx.save();
+                    octx.scale(resScale, resScale);
+                    if (blurPx > 0) {
+                        octx.filter = `blur(${blurPx}px)`;
+                    }
+                    octx.fillStyle = palette.colors[ch];
+                    drawTextCentered(octx, TEXT, logicalW / 2, logicalH / 2, fontSize);
+                    octx.restore();
+
+                    pyramid[ch].push({
+                        canvas: offscreen,
+                        blur,
+                        resScale,
+                        logicalW,
+                        logicalH,
+                        pixelW,
+                        pixelH
+                    });
+                }
+            }
+
+            spritePyramid = pyramid;
+        }
+
+        // --- Canvas Sizing ---
+        function resizeCanvas() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            viewportW = window.innerWidth;
+            viewportH = window.innerHeight;
+
+            canvas.width = Math.ceil(viewportW * dpr);
+            canvas.height = Math.ceil(viewportH * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // --- Theme Handling ---
+        function setTheme(isDark, rebuild = true) {
+            isDarkTheme = isDark;
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+            if (rebuild) {
+                buildSpritePyramid();
+                markDirty();
+            }
+        }
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            setTheme(true, false);
+        } else {
+            setTheme(false, false);
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const nextDark = !document.documentElement.classList.contains('dark');
+            setTheme(nextDark, true);
+            localStorage.setItem('color-theme', nextDark ? 'dark' : 'light');
+        });
+
+        // --- Effect Math (matches index.html) ---
+        function computeTargetState(clientX, clientY) {
+            const rect = container.getBoundingClientRect();
+
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            const dxCenter = centerX - clientX;
+            const dyCenter = centerY - clientY;
+            const centerDistance = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+
+            const dxBox = Math.max(rect.left - clientX, 0, clientX - rect.right);
+            const dyBox = Math.max(rect.top - clientY, 0, clientY - rect.bottom);
+            const boxDistance = Math.sqrt(dxBox * dxBox + dyBox * dyBox);
+
+            const safeZone = rect.width * CONFIG.safeZoneWidthRatio;
+
+            let spread = centerDistance * CONFIG.baseSpreadMultiplier;
+
+            if (boxDistance > safeZone) {
+                const excessDistance = boxDistance - safeZone;
+                spread += Math.pow(excessDistance, CONFIG.rampPower) * CONFIG.rampMultiplier;
+            }
+
+            const baseAngle = Math.atan2(dyCenter, dxCenter);
+            const offsetRad = (CONFIG.angleOffset * Math.PI) / 180;
+
+            const angle1 = baseAngle - offsetRad;
+            const angle2 = baseAngle;
+            const angle3 = baseAngle + offsetRad;
+
+            const blurAmount = spread * CONFIG.blurMultiplier;
+            const scaleAmount = 1 + (spread * CONFIG.scaleMultiplier);
+
+            return {
+                tx1: Math.cos(angle1) * spread,
+                ty1: Math.sin(angle1) * spread,
+                tx2: Math.cos(angle2) * spread,
+                ty2: Math.sin(angle2) * spread,
+                tx3: Math.cos(angle3) * spread,
+                ty3: Math.sin(angle3) * spread,
+                scale: scaleAmount,
+                blur: blurAmount
+            };
+        }
+
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        // Find the two nearest pre-blurred sprite levels and crossfade factor t in [0, 1]
+        function getBlurLevels(blurAmount) {
+            const maxIdx = PYRAMID_SPEC.length - 1;
+            if (blurAmount <= PYRAMID_SPEC[0].blur) {
+                return { loIdx: 0, hiIdx: 0, t: 0 };
+            }
+            if (blurAmount >= PYRAMID_SPEC[maxIdx].blur) {
+                return { loIdx: maxIdx, hiIdx: maxIdx, t: 0 };
+            }
+            for (let i = 0; i < maxIdx; i++) {
+                const lo = PYRAMID_SPEC[i].blur;
+                const hi = PYRAMID_SPEC[i + 1].blur;
+                if (blurAmount <= hi) {
+                    const t = (blurAmount - lo) / (hi - lo);
+                    return { loIdx: i, hiIdx: i + 1, t };
+                }
+            }
+            return { loIdx: maxIdx, hiIdx: maxIdx, t: 0 };
+        }
+
+        // Draw a single channel layer at (centerX + tx, centerY + ty) with scale and crossfaded blur
+        function drawChannelLayer(channelSprites, loIdx, hiIdx, t, centerX, centerY, tx, ty, scale, compositeOp) {
+            const spriteLo = channelSprites[loIdx];
+            const spriteHi = channelSprites[hiIdx];
+
+            ctx.save();
+            ctx.globalCompositeOperation = compositeOp;
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.translate(centerX + tx, centerY + ty);
+            ctx.scale(scale, scale);
+
+            if (loIdx === hiIdx || t <= 0.001) {
+                ctx.drawImage(
+                    spriteLo.canvas,
+                    -spriteLo.logicalW / 2,
+                    -spriteLo.logicalH / 2,
+                    spriteLo.logicalW,
+                    spriteLo.logicalH
+                );
+            } else if (t >= 0.999) {
+                ctx.drawImage(
+                    spriteHi.canvas,
+                    -spriteHi.logicalW / 2,
+                    -spriteHi.logicalH / 2,
+                    spriteHi.logicalW,
+                    spriteHi.logicalH
+                );
+            } else {
+                // Crossfade the two pre-blurred levels in an offscreen scratch canvas using
+                // linear additive alpha ('lighter') so multiply/screen never suffers a 0.5-midpoint alpha dip.
+                const scratchScale = spriteLo.resScale;
+                const reqW = Math.ceil(spriteHi.logicalW * scratchScale);
+                const reqH = Math.ceil(spriteHi.logicalH * scratchScale);
+
+                if (scratchCanvas.width < reqW || scratchCanvas.height < reqH) {
+                    scratchCanvas.width = Math.max(scratchCanvas.width, reqW);
+                    scratchCanvas.height = Math.max(scratchCanvas.height, reqH);
+                }
+
+                scratchCtx.setTransform(1, 0, 0, 1, 0, 0);
+                scratchCtx.clearRect(0, 0, reqW, reqH);
+                scratchCtx.imageSmoothingEnabled = true;
+                scratchCtx.imageSmoothingQuality = 'high';
+                scratchCtx.scale(scratchScale, scratchScale);
+
+                const offsetX = (spriteHi.logicalW - spriteLo.logicalW) / 2;
+                const offsetY = (spriteHi.logicalH - spriteLo.logicalH) / 2;
+
+                // Lower blur level at alpha (1 - t)
+                scratchCtx.globalCompositeOperation = 'source-over';
+                scratchCtx.globalAlpha = 1 - t;
+                scratchCtx.drawImage(
+                    spriteLo.canvas,
+                    offsetX,
+                    offsetY,
+                    spriteLo.logicalW,
+                    spriteLo.logicalH
+                );
+
+                // Higher blur level added at alpha t
+                scratchCtx.globalCompositeOperation = 'lighter';
+                scratchCtx.globalAlpha = t;
+                scratchCtx.drawImage(
+                    spriteHi.canvas,
+                    0,
+                    0,
+                    spriteHi.logicalW,
+                    spriteHi.logicalH
+                );
+
+                scratchCtx.globalAlpha = 1;
+                scratchCtx.globalCompositeOperation = 'source-over';
+
+                // Composite the crossfaded layer onto the main canvas
+                ctx.drawImage(
+                    scratchCanvas,
+                    0, 0, reqW, reqH,
+                    -spriteHi.logicalW / 2,
+                    -spriteHi.logicalH / 2,
+                    spriteHi.logicalW,
+                    spriteHi.logicalH
+                );
+            }
+
+            ctx.restore();
+        }
+
+        // --- Main Render Routine (runs ONLY when dirty or transitioning) ---
+        function render() {
+            if (!spritePyramid) return;
+
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, viewportW, viewportH);
+
+            const palette = isDarkTheme ? THEME_PALETTES.dark : THEME_PALETTES.light;
+            const { loIdx, hiIdx, t } = getBlurLevels(currentState.blur);
+
+            // Draw order matches index.html z-index: layer3 (z=1), layer2 (z=2), layer1 (z=3)
+            drawChannelLayer(
+                spritePyramid[0], loIdx, hiIdx, t,
+                centerX, centerY, currentState.tx3, currentState.ty3,
+                currentState.scale, palette.composite
+            );
+            drawChannelLayer(
+                spritePyramid[1], loIdx, hiIdx, t,
+                centerX, centerY, currentState.tx2, currentState.ty2,
+                currentState.scale, palette.composite
+            );
+            drawChannelLayer(
+                spritePyramid[2], loIdx, hiIdx, t,
+                centerX, centerY, currentState.tx1, currentState.ty1,
+                currentState.scale, palette.composite
+            );
+        }
+
+        function markDirty() {
+            needsRender = true;
+            if (rafId === null) {
+                rafId = requestAnimationFrame(tick);
+            }
+        }
+
+        function tick(now) {
+            rafId = null;
+
+            if (isTransitioning) {
+                if (isActive) {
+                    targetState = computeTargetState(cursorX, cursorY);
+                }
+
+                if (transitionDuration <= 0) {
+                    currentState = { ...targetState };
+                    isTransitioning = false;
+                } else {
+                    const elapsed = now - transitionStartTime;
+                    const progress = Math.min(1, Math.max(0, elapsed / transitionDuration));
+                    const eased = easeOutCubic(progress);
+
+                    currentState.tx1 = lerp(startState.tx1, targetState.tx1, eased);
+                    currentState.ty1 = lerp(startState.ty1, targetState.ty1, eased);
+                    currentState.tx2 = lerp(startState.tx2, targetState.tx2, eased);
+                    currentState.ty2 = lerp(startState.ty2, targetState.ty2, eased);
+                    currentState.tx3 = lerp(startState.tx3, targetState.tx3, eased);
+                    currentState.ty3 = lerp(startState.ty3, targetState.ty3, eased);
+                    currentState.scale = lerp(startState.scale, targetState.scale, eased);
+                    currentState.blur = lerp(startState.blur, targetState.blur, eased);
+
+                    if (progress >= 1) {
+                        currentState = { ...targetState };
+                        isTransitioning = false;
+                    }
+                }
+                needsRender = true;
+            }
+
+            if (needsRender) {
+                render();
+                needsRender = false;
+            }
+
+            if (isTransitioning) {
+                rafId = requestAnimationFrame(tick);
+            }
+        }
+
+        // --- Pointer & Window Events ---
+        function handleMouseMove(e) {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+
+            if (!isActive) {
+                isActive = true;
+                startState = { ...currentState };
+                targetState = computeTargetState(cursorX, cursorY);
+                transitionDuration = CONFIG.animationDurationMs;
+                transitionStartTime = performance.now();
+                isTransitioning = transitionDuration > 0;
+                if (!isTransitioning) {
+                    currentState = { ...targetState };
+                }
+            } else if (!isTransitioning) {
+                targetState = computeTargetState(cursorX, cursorY);
+                currentState = { ...targetState };
+            }
+
+            markDirty();
+        }
+
+        function resetEffect() {
+            if (!isActive && !isTransitioning && currentState.blur === 0 && currentState.scale === 1) {
+                return;
+            }
+            isActive = false;
+            startState = { ...currentState };
+            targetState = { ...REST_STATE };
+            transitionDuration = CONFIG.animationDurationMs;
+            transitionStartTime = performance.now();
+            isTransitioning = transitionDuration > 0;
+            if (!isTransitioning) {
+                currentState = { ...REST_STATE };
+            }
+            markDirty();
+        }
+
+        window.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseleave', resetEffect);
+        document.addEventListener('mouseout', (e) => {
+            if (!e.relatedTarget) {
+                resetEffect();
+            }
+        });
+
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (isActive && !isTransitioning) {
+                targetState = computeTargetState(cursorX, cursorY);
+                currentState = { ...targetState };
+            }
+            markDirty();
+
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const currentFontSize = parseFloat(getComputedStyle(measureEl).fontSize) || 128;
+                const currentDpr = Math.min(window.devicePixelRatio || 1, 2);
+                if (currentFontSize !== lastFontSize || currentDpr !== dpr) {
+                    resizeCanvas();
+                    buildSpritePyramid();
+                    markDirty();
+                }
+            }, 120);
+        });
+
+        // --- Initialization ---
+        resizeCanvas();
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                resizeCanvas();
+                buildSpritePyramid();
+                markDirty();
+            });
+        } else {
+            buildSpritePyramid();
+            markDirty();
+        }
+    </script>
+</body>
+</html>

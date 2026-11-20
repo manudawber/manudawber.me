@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manu Dawber — Performance Benchmark</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background: #0d0d0f;
+            color: #f3f4f6;
+        }
+
+        #stage-frame {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            border: 0;
+            z-index: 10;
+            background: #fcfcfc;
+        }
+
+        #cursor-dot {
+            position: fixed;
+            width: 14px;
+            height: 14px;
+            margin-left: -7px;
+            margin-top: -7px;
+            border-radius: 9999px;
+            border: 2px solid #ef4444;
+            background: rgba(239, 68, 68, 0.35);
+            pointer-events: none;
+            z-index: 30;
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+
+    <!-- Full-viewport test iframe (shown only while benchmark is running) -->
+    <iframe id="stage-frame" class="hidden" title="Benchmark Stage"></iframe>
+    <div id="cursor-dot"></div>
+
+    <!-- Floating HUD while running -->
+    <div id="run-hud" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-40 bg-black/85 backdrop-blur-md border border-white/15 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-5 text-xs">
+        <div>
+            <div class="text-gray-400 uppercase tracking-wider text-[10px]">Testing</div>
+            <div id="hud-name" class="font-bold text-white text-sm">—</div>
+        </div>
+        <div class="h-7 w-px bg-white/15"></div>
+        <div>
+            <div class="text-gray-400 uppercase tracking-wider text-[10px]">Phase</div>
+            <div id="hud-phase" class="font-semibold text-amber-300">—</div>
+        </div>
+        <div class="h-7 w-px bg-white/15"></div>
+        <div>
+            <div class="text-gray-400 uppercase tracking-wider text-[10px]">Theme</div>
+            <div id="hud-theme" class="font-semibold text-sky-300">Light</div>
+        </div>
+        <div class="h-7 w-px bg-white/15"></div>
+        <div>
+            <div class="text-gray-400 uppercase tracking-wider text-[10px]">Live FPS</div>
+            <div id="hud-fps" class="font-mono font-bold text-emerald-400 text-sm">--</div>
+        </div>
+        <div class="w-32">
+            <div class="flex justify-between text-[10px] text-gray-400 mb-1">
+                <span>Progress</span>
+                <span id="hud-pct">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div id="hud-bar" class="h-full bg-emerald-400 transition-all duration-75" style="width: 0%"></div>
+            </div>
+        </div>
+        <button id="btn-abort" class="ml-1 px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/35 text-red-300 font-semibold transition-colors">
+            Stop
+        </button>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="max-w-6xl mx-auto px-6 py-10">
+        <div class="flex flex-wrap items-start justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-3xl font-black tracking-tight text-white">Homepage Effect Benchmark</h1>
+                <p class="text-sm text-gray-400 mt-1">
+                    Repeatable full-viewport stress test: edge/corner sweeps at peak blur &amp; scale with mid-motion Light &harr; Dark theme toggles.
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                    <span>Duration / variant:</span>
+                    <select id="sel-duration" class="bg-transparent text-white font-semibold focus:outline-none cursor-pointer">
+                        <option value="4000" class="bg-gray-900">4s</option>
+                        <option value="6000" selected class="bg-gray-900">6s</option>
+                        <option value="10000" class="bg-gray-900">10s</option>
+                    </select>
+                </label>
+                <button id="btn-run-all" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm shadow-lg shadow-emerald-500/20 transition-colors cursor-pointer">
+                    Run Full Benchmark
+                </button>
+            </div>
+        </div>
+
+        <!-- file:// Warning -->
+        <div id="file-warning" class="hidden mb-6 p-4 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-sm">
+            <div class="font-bold mb-1">Local HTTP server required</div>
+            <p class="text-amber-100/90">
+                Browsers block scripts from controlling iframes over <code class="bg-black/40 px-1.5 py-0.5 rounded">file://</code>.
+                Start a quick local server in this folder and open <code class="bg-black/40 px-1.5 py-0.5 rounded">http://localhost:8000/benchmark.html</code>:
+            </p>
+            <pre class="mt-2 bg-black/50 rounded-lg px-3 py-2 text-xs text-emerald-300 font-mono overflow-x-auto">python3 -m http.server 8000</pre>
+        </div>
+
+        <!-- Environment Info -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 text-xs">
+            <div class="bg-white/5 border border-white/10 rounded-xl p-3.5">
+                <div class="text-gray-400">Viewport</div>
+                <div id="env-viewport" class="font-mono font-bold text-white text-sm mt-0.5">—</div>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-3.5">
+                <div class="text-gray-400">Device Pixel Ratio</div>
+                <div id="env-dpr" class="font-mono font-bold text-white text-sm mt-0.5">—</div>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-3.5">
+                <div class="text-gray-400">Detected Refresh Rate</div>
+                <div id="env-hz" class="font-mono font-bold text-emerald-400 text-sm mt-0.5">Measuring…</div>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-3.5">
+                <div class="text-gray-400">Theme Switches / Run</div>
+                <div class="font-mono font-bold text-sky-300 text-sm mt-0.5">4× (L→D→L→D→L)</div>
+            </div>
+        </div>
+
+        <!-- Variant Selector / Individual Runners -->
+        <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-8">
+            <div class="px-5 py-3.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-bold text-sm text-white">Results Comparison</h2>
+                <div class="flex items-center gap-2">
+                    <button id="btn-copy-md" class="hidden px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-semibold text-gray-200 transition-colors cursor-pointer">
+                        Copy Markdown Table
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-white/5 text-gray-400 uppercase tracking-wider text-[10px]">
+                        <tr>
+                            <th class="px-4 py-3">Variant</th>
+                            <th class="px-3 py-3 text-right">Init (ms)</th>
+                            <th class="px-3 py-3 text-right">Avg FPS</th>
+                            <th class="px-3 py-3 text-right">1% Low FPS</th>
+                            <th class="px-3 py-3 text-right">Mean (ms)</th>
+                            <th class="px-3 py-3 text-right">p95 (ms)</th>
+                            <th class="px-3 py-3 text-right">Max (ms)</th>
+                            <th class="px-3 py-3 text-right">Theme Spike</th>
+                            <th class="px-3 py-3 text-right">Dropped %</th>
+                            <th class="px-4 py-3">Frame Time Timeline</th>
+                            <th class="px-3 py-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body" class="divide-y divide-white/10"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Test Script Description -->
+        <div class="grid md:grid-cols-2 gap-4 text-xs text-gray-400">
+            <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <h3 class="font-bold text-gray-200 mb-2">What the benchmark does</h3>
+                <ul class="space-y-1.5 list-disc list-inside">
+                    <li><strong class="text-gray-200">0–20%</strong>: Spirals outward from center to screen edges (tests blur ramp-up).</li>
+                    <li><strong class="text-gray-200">20–75%</strong>: Traces the outer viewport perimeter &amp; corners (peak blur + peak scale).</li>
+                    <li><strong class="text-gray-200">75–100%</strong>: Fast diagonal corner-to-corner sweeps.</li>
+                    <li><strong class="text-gray-200">Theme toggles</strong>: Clicks <code class="text-gray-200">#theme-toggle</code> mid-motion at 20%, 45%, 70%, and 88% (Light &rarr; Dark &rarr; Light &rarr; Dark &rarr; Light).</li>
+                </ul>
+            </div>
+            <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <h3 class="font-bold text-gray-200 mb-2">How to read the numbers</h3>
+                <ul class="space-y-1.5 list-disc list-inside">
+                    <li><strong class="text-gray-200">1% Low FPS</strong>: Effective FPS of the worst 1% of frames (best indicator of perceived stutter).</li>
+                    <li><strong class="text-gray-200">Theme Spike</strong>: Worst single-frame latency within &plusmn;3 frames of a Light/Dark switch (catches texture re-baking stalls).</li>
+                    <li><strong class="text-gray-200">Dropped %</strong>: Frames exceeding 1.5&times; your display's refresh interval.</li>
+                    <li><strong class="text-gray-200">Timeline</strong>: Green &le; budget, amber &le; 2&times; budget, red &gt; 2&times; budget; blue ticks mark theme toggles.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const VARIANTS = [
+            { id: 'original', name: 'Original (CSS)', file: 'index.html' },
+            { id: 'css',      name: 'CSS Optimized',  file: 'index-css.html' },
+            { id: 'canvas',   name: 'Canvas2D Pyramid', file: 'index-canvas.html' },
+            { id: 'webgl',    name: 'WebGL Shader',   file: 'index-webgl.html' }
+        ];
+
+        const THEME_TOGGLE_FRACTIONS = [0.20, 0.45, 0.70, 0.88];
+
+        const stageFrame = document.getElementById('stage-frame');
+        const cursorDot = document.getElementById('cursor-dot');
+        const runHud = document.getElementById('run-hud');
+        const hudName = document.getElementById('hud-name');
+        const hudPhase = document.getElementById('hud-phase');
+        const hudTheme = document.getElementById('hud-theme');
+        const hudFps = document.getElementById('hud-fps');
+        const hudPct = document.getElementById('hud-pct');
+        const hudBar = document.getElementById('hud-bar');
+        const btnRunAll = document.getElementById('btn-run-all');
+        const btnAbort = document.getElementById('btn-abort');
+        const btnCopyMd = document.getElementById('btn-copy-md');
+        const selDuration = document.getElementById('sel-duration');
+        const resultsBody = document.getElementById('results-body');
+        const envViewport = document.getElementById('env-viewport');
+        const envDpr = document.getElementById('env-dpr');
+        const envHz = document.getElementById('env-hz');
+        const fileWarning = document.getElementById('file-warning');
+
+        const results = {};
+        let detectedHz = 60;
+        let budgetMs = 1000 / 60;
+        let abortRequested = false;
+        let isRunning = false;
+
+        if (window.location.protocol === 'file:') {
+            fileWarning.classList.remove('hidden');
+            btnRunAll.disabled = true;
+            btnRunAll.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function updateEnvInfo() {
+            envViewport.textContent = `${window.innerWidth} × ${window.innerHeight}`;
+            envDpr.textContent = `${(window.devicePixelRatio || 1).toFixed(2)}×`;
+        }
+        updateEnvInfo();
+        window.addEventListener('resize', updateEnvInfo);
+
+        // Measure display refresh rate on idle parent window
+        function measureRefreshRate() {
+            return new Promise((resolve) => {
+                const deltas = [];
+                let prev = null;
+                let count = 0;
+                function step(now) {
+                    if (prev !== null) deltas.push(now - prev);
+                    prev = now;
+                    count++;
+                    if (count < 45) {
+                        requestAnimationFrame(step);
+                    } else {
+                        deltas.sort((a, b) => a - b);
+                        const median = deltas[Math.floor(deltas.length / 2)] || 16.67;
+                        const hz = Math.round(1000 / median);
+                        detectedHz = Math.max(30, Math.min(240, hz));
+                        budgetMs = 1000 / detectedHz;
+                        envHz.textContent = `${detectedHz} Hz (${budgetMs.toFixed(1)}ms budget)`;
+                        resolve(detectedHz);
+                    }
+                }
+                requestAnimationFrame(step);
+            });
+        }
+
+        function percentile(sorted, p) {
+            if (!sorted.length) return 0;
+            const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+            return sorted[idx];
+        }
+
+        // Deterministic synthetic cursor path across the viewport
+        function getCursorPosition(progress, w, h) {
+            const pad = 12;
+            const cx = w / 2;
+            const cy = h / 2;
+            const rx = Math.max(10, cx - pad);
+            const ry = Math.max(10, cy - pad);
+
+            if (progress < 0.20) {
+                // Phase 1: Spiral outward from center to outer edge
+                const t = progress / 0.20;
+                const angle = t * Math.PI * 3;
+                return {
+                    x: cx + Math.cos(angle) * rx * t,
+                    y: cy + Math.sin(angle) * ry * t,
+                    phase: 'Ramp Outward'
+                };
+            }
+
+            if (progress < 0.75) {
+                // Phase 2: Trace outer rectangle perimeter & corners (peak blur + scale)
+                const t = ((progress - 0.20) / 0.55) * 2.0; // 2 full laps around perimeter
+                const lap = t % 1;
+                const seg = lap * 4;
+                let x, y;
+                if (seg < 1) {
+                    x = pad + (w - pad * 2) * seg;
+                    y = pad;
+                } else if (seg < 2) {
+                    x = w - pad;
+                    y = pad + (h - pad * 2) * (seg - 1);
+                } else if (seg < 3) {
+                    x = (w - pad) - (w - pad * 2) * (seg - 2);
+                    y = h - pad;
+                } else {
+                    x = pad;
+                    y = (h - pad) - (h - pad * 2) * (seg - 3);
+                }
+                return { x, y, phase: 'Edge / Corner Stress' };
+            }
+
+            // Phase 3: Fast diagonal corner-to-corner sweeps
+            const t = (progress - 0.75) / 0.25;
+            const waveX = Math.sin(t * Math.PI * 4);
+            const waveY = Math.cos(t * Math.PI * 3);
+            return {
+                x: cx + waveX * rx,
+                y: cy + waveY * ry,
+                phase: 'Diagonal Sweeps'
+            };
+        }
+
+        function drawSparkline(canvas, deltas, toggleFrameIndices) {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const w = 180;
+            const h = 32;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width = `${w}px`;
+            canvas.style.height = `${h}px`;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, w, h);
+
+            if (!deltas.length) return;
+
+            const maxScaleMs = Math.max(budgetMs * 4, 50);
+            const toggleSet = new Set(toggleFrameIndices);
+
+            // Reference budget line
+            const budgetY = h - Math.min(h - 2, (budgetMs / maxScaleMs) * h);
+            ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, budgetY);
+            ctx.lineTo(w, budgetY);
+            ctx.stroke();
+
+            const barW = Math.max(1, w / deltas.length);
+            for (let i = 0; i < deltas.length; i++) {
+                const ms = deltas[i];
+                const barH = Math.min(h, (ms / maxScaleMs) * h);
+                const x = (i / deltas.length) * w;
+
+                if (ms <= budgetMs * 1.25) {
+                    ctx.fillStyle = '#34d399';
+                } else if (ms <= budgetMs * 2.0) {
+                    ctx.fillStyle = '#fbbf24';
+                } else {
+                    ctx.fillStyle = '#f87171';
+                }
+                ctx.fillRect(x, h - barH, Math.ceil(barW), barH);
+
+                if (toggleSet.has(i)) {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(x, 0, 1.5, h);
+                }
+            }
+        }
+
+        function renderTable() {
+            resultsBody.innerHTML = '';
+            let completedCount = 0;
+
+            for (const v of VARIANTS) {
+                const r = results[v.id];
+                if (r && !r.error) completedCount++;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-white/[0.03] transition-colors';
+
+                if (!r) {
+                    tr.innerHTML = `
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-white">${v.name}</div>
+                            <div class="text-[11px] text-gray-500 font-mono">${v.file}</div>
+                        </td>
+                        <td colspan="9" class="px-3 py-3.5 text-gray-500 italic">Not run yet</td>
+                        <td class="px-3 py-3.5 text-right">
+                            <button data-run="${v.id}" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors cursor-pointer">Run</button>
+                        </td>
+                    `;
+                } else if (r.error) {
+                    tr.innerHTML = `
+                        <td class="px-4 py-3.5 font-bold text-white">${v.name}</td>
+                        <td colspan="9" class="px-3 py-3.5 text-red-400">${r.error}</td>
+                        <td class="px-3 py-3.5 text-right">
+                            <button data-run="${v.id}" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold cursor-pointer">Retry</button>
+                        </td>
+                    `;
+                } else {
+                    const fpsColor = r.avgFps >= detectedHz * 0.9 ? 'text-emerald-400' : (r.avgFps >= detectedHz * 0.6 ? 'text-amber-300' : 'text-red-400');
+                    const lowColor = r.low1Fps >= detectedHz * 0.8 ? 'text-emerald-400' : (r.low1Fps >= detectedHz * 0.45 ? 'text-amber-300' : 'text-red-400');
+                    const spikeColor = r.themeSpikeMs <= budgetMs * 1.5 ? 'text-emerald-400' : (r.themeSpikeMs <= budgetMs * 3 ? 'text-amber-300' : 'text-red-400');
+
+                    tr.innerHTML = `
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-white">${v.name}</div>
+                            <div class="text-[11px] text-gray-500 font-mono">${v.file}</div>
+                        </td>
+                        <td class="px-3 py-3.5 text-right font-mono text-gray-300">${r.initMs.toFixed(0)}</td>
+                        <td class="px-3 py-3.5 text-right font-mono font-bold ${fpsColor}">${r.avgFps.toFixed(1)}</td>
+                        <td class="px-3 py-3.5 text-right font-mono font-bold ${lowColor}">${r.low1Fps.toFixed(1)}</td>
+                        <td class="px-3 py-3.5 text-right font-mono text-gray-300">${r.meanMs.toFixed(1)}</td>
+                        <td class="px-3 py-3.5 text-right font-mono text-gray-300">${r.p95Ms.toFixed(1)}</td>
+                        <td class="px-3 py-3.5 text-right font-mono text-gray-300">${r.maxMs.toFixed(1)}</td>
+                        <td class="px-3 py-3.5 text-right font-mono font-semibold ${spikeColor}">${r.themeSpikeMs.toFixed(1)}ms</td>
+                        <td class="px-3 py-3.5 text-right font-mono text-gray-300">${r.droppedPct.toFixed(1)}%</td>
+                        <td class="px-4 py-2"><canvas class="sparkline rounded bg-black/40 border border-white/10"></canvas></td>
+                        <td class="px-3 py-3.5 text-right">
+                            <button data-run="${v.id}" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors cursor-pointer">Re-run</button>
+                        </td>
+                    `;
+                    const spark = tr.querySelector('canvas.sparkline');
+                    drawSparkline(spark, r.deltas, r.toggleFrameIndices);
+                }
+
+                resultsBody.appendChild(tr);
+            }
+
+            btnCopyMd.classList.toggle('hidden', completedCount === 0);
+
+            resultsBody.querySelectorAll('button[data-run]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    if (isRunning || window.location.protocol === 'file:') return;
+                    const variant = VARIANTS.find((x) => x.id === btn.dataset.run);
+                    if (variant) runSuite([variant]);
+                });
+            });
+        }
+
+        function waitTwoFrames(win) {
+            return new Promise((resolve) => {
+                win.requestAnimationFrame(() => win.requestAnimationFrame(resolve));
+            });
+        }
+
+        async function runVariant(variant, durationMs) {
+            // Ensure identical initial theme (Light) for every variant
+            localStorage.setItem('color-theme', 'light');
+
+            hudName.textContent = variant.name;
+            hudPhase.textContent = 'Loading…';
+            hudTheme.textContent = 'Light';
+            hudFps.textContent = '--';
+            hudPct.textContent = '0%';
+            hudBar.style.width = '0%';
+
+            const initStart = performance.now();
+
+            await new Promise((resolve, reject) => {
+                const onLoad = () => {
+                    stageFrame.removeEventListener('load', onLoad);
+                    resolve();
+                };
+                stageFrame.addEventListener('load', onLoad);
+                stageFrame.src = `${variant.file}?bench=${Date.now()}`;
+            });
+
+            const iframeWin = stageFrame.contentWindow;
+            const iframeDoc = stageFrame.contentDocument;
+
+            if (!iframeWin || !iframeDoc) {
+                throw new Error('Cannot access iframe (run via local HTTP server)');
+            }
+
+            if (iframeDoc.fonts && iframeDoc.fonts.ready) {
+                await iframeDoc.fonts.ready;
+            }
+            await waitTwoFrames(iframeWin);
+            const initMs = performance.now() - initStart;
+
+            // Warm-up: enter mouse near center briefly so initial enter transition completes
+            const w = iframeWin.innerWidth;
+            const h = iframeWin.innerHeight;
+            iframeWin.dispatchEvent(new MouseEvent('mousemove', { clientX: w / 2 + 10, clientY: h / 2, bubbles: true }));
+            await new Promise((r) => setTimeout(r, 450));
+
+            if (abortRequested) return null;
+
+            const themeBtn = iframeDoc.getElementById('theme-toggle');
+            const deltas = [];
+            const toggleFrameIndices = [];
+            let nextToggleIdx = 0;
+            let isDark = false;
+
+            let startTime = 0;
+            let lastFrameTime = 0;
+            let hudLastUpdate = 0;
+            let hudFrames = 0;
+
+            cursorDot.style.display = 'block';
+
+            await new Promise((resolve) => {
+                function frame(now) {
+                    if (abortRequested) {
+                        resolve();
+                        return;
+                    }
+
+                    const elapsed = now - startTime;
+                    const progress = Math.min(1, elapsed / durationMs);
+
+                    const dt = now - lastFrameTime;
+                    lastFrameTime = now;
+                    if (dt > 0) {
+                        deltas.push(dt);
+                    }
+
+                    // Trigger Light <-> Dark toggle mid-motion at scheduled fractions
+                    if (nextToggleIdx < THEME_TOGGLE_FRACTIONS.length && progress >= THEME_TOGGLE_FRACTIONS[nextToggleIdx]) {
+                        nextToggleIdx++;
+                        toggleFrameIndices.push(Math.max(0, deltas.length - 1));
+                        if (themeBtn) {
+                            themeBtn.click();
+                            isDark = !isDark;
+                            hudTheme.textContent = isDark ? 'Dark' : 'Light';
+                        }
+                    }
+
+                    const pos = getCursorPosition(progress, w, h);
+                    cursorDot.style.left = `${pos.x}px`;
+                    cursorDot.style.top = `${pos.y}px`;
+
+                    iframeWin.dispatchEvent(new MouseEvent('mousemove', {
+                        clientX: pos.x,
+                        clientY: pos.y,
+                        bubbles: true
+                    }));
+
+                    hudFrames++;
+                    if (now - hudLastUpdate >= 200) {
+                        const instFps = (hudFrames * 1000) / (now - hudLastUpdate);
+                        hudFps.textContent = Math.round(instFps);
+                        hudPhase.textContent = pos.phase;
+                        const pct = Math.round(progress * 100);
+                        hudPct.textContent = `${pct}%`;
+                        hudBar.style.width = `${pct}%`;
+                        hudFrames = 0;
+                        hudLastUpdate = now;
+                    }
+
+                    if (elapsed < durationMs) {
+                        iframeWin.requestAnimationFrame(frame);
+                    } else {
+                        resolve();
+                    }
+                }
+
+                iframeWin.requestAnimationFrame((t0) => {
+                    startTime = t0;
+                    lastFrameTime = t0;
+                    hudLastUpdate = t0;
+                    iframeWin.requestAnimationFrame(frame);
+                });
+            });
+
+            cursorDot.style.display = 'none';
+
+            if (abortRequested) return null;
+
+            // Compute statistics
+            const sorted = deltas.slice().sort((a, b) => a - b);
+            const sum = deltas.reduce((a, b) => a + b, 0);
+            const meanMs = sum / Math.max(1, deltas.length);
+            const p95Ms = percentile(sorted, 95);
+            const p99Ms = percentile(sorted, 99);
+            const maxMs = sorted[sorted.length - 1] || 0;
+            const avgFps = 1000 / Math.max(0.1, meanMs);
+            const low1Fps = 1000 / Math.max(0.1, p99Ms);
+
+            const dropThreshold = budgetMs * 1.5;
+            const droppedCount = deltas.filter((d) => d > dropThreshold).length;
+            const droppedPct = (droppedCount / Math.max(1, deltas.length)) * 100;
+
+            // Measure worst frame spike around theme toggles (±3 frames)
+            let themeSpikeMs = 0;
+            for (const idx of toggleFrameIndices) {
+                for (let j = Math.max(0, idx - 1); j <= Math.min(deltas.length - 1, idx + 4); j++) {
+                    if (deltas[j] > themeSpikeMs) themeSpikeMs = deltas[j];
+                }
+            }
+
+            return {
+                initMs,
+                avgFps,
+                low1Fps,
+                meanMs,
+                p95Ms,
+                p99Ms,
+                maxMs,
+                themeSpikeMs,
+                droppedPct,
+                deltas,
+                toggleFrameIndices
+            };
+        }
+
+        async function runSuite(variantsToRun) {
+            if (isRunning) return;
+            isRunning = true;
+            abortRequested = false;
+
+            const durationMs = parseInt(selDuration.value, 10) || 6000;
+            stageFrame.classList.remove('hidden');
+            runHud.classList.remove('hidden');
+
+            try {
+                for (const v of variantsToRun) {
+                    if (abortRequested) break;
+                    try {
+                        const res = await runVariant(v, durationMs);
+                        if (res) results[v.id] = res;
+                    } catch (err) {
+                        results[v.id] = { error: err.message || String(err) };
+                    }
+                    renderTable();
+                }
+            } finally {
+                stageFrame.classList.add('hidden');
+                stageFrame.src = 'about:blank';
+                runHud.classList.add('hidden');
+                cursorDot.style.display = 'none';
+                isRunning = false;
+                renderTable();
+            }
+        }
+
+        btnRunAll.addEventListener('click', () => runSuite(VARIANTS));
+        btnAbort.addEventListener('click', () => { abortRequested = true; });
+
+        btnCopyMd.addEventListener('click', () => {
+            const lines = [
+                `Viewport: ${window.innerWidth}×${window.innerHeight} @ ${(window.devicePixelRatio || 1).toFixed(2)}× DPR (${detectedHz}Hz)`,
+                '',
+                '| Variant | Init (ms) | Avg FPS | 1% Low FPS | Mean (ms) | p95 (ms) | Max (ms) | Theme Spike (ms) | Dropped % |',
+                '|---|---:|---:|---:|---:|---:|---:|---:|---:|'
+            ];
+            for (const v of VARIANTS) {
+                const r = results[v.id];
+                if (!r || r.error) continue;
+                lines.push(`| ${v.name} | ${r.initMs.toFixed(0)} | ${r.avgFps.toFixed(1)} | ${r.low1Fps.toFixed(1)} | ${r.meanMs.toFixed(1)} | ${r.p95Ms.toFixed(1)} | ${r.maxMs.toFixed(1)} | ${r.themeSpikeMs.toFixed(1)} | ${r.droppedPct.toFixed(1)}% |`);
+            }
+            navigator.clipboard.writeText(lines.join('\n')).then(() => {
+                const prev = btnCopyMd.textContent;
+                btnCopyMd.textContent = 'Copied!';
+                setTimeout(() => { btnCopyMd.textContent = prev; }, 1500);
+            });
+        });
+
+        renderTable();
+        measureRefreshRate();
+    </script>
+</body>
+</html>
